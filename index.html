@@ -3,39 +3,84 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cyber OSINT Search Engine</title>
+  <title>Cyber OSINT Search</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gradient-to-br from-gray-50 to-white min-h-screen p-6 font-sans">
-  <div class="max-w-xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-    <div class="p-6">
-      <h1 class="text-2xl font-bold text-gray-800 mb-4">🔍 IP/DNS Cyber OSINT Search</h1>
-      <div class="flex items-center gap-2">
+<body class="bg-gray-900 min-h-screen flex font-sans text-gray-200 overflow-x-hidden">
+
+  <!-- 좌측: 검색 이력 -->
+  <aside class="w-64 bg-gray-800 border-r border-gray-700 p-4 hidden md:block">
+    <h2 class="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">📜 검색 이력</h2>
+    <ul id="historyList" class="space-y-2 text-sm text-blue-400 cursor-pointer"></ul>
+    <button onclick="clearHistory()" class="mt-4 text-xs text-red-400 hover:underline">이력 전체 삭제</button>
+  </aside>
+
+  <!-- 우측: 메인 콘텐츠 -->
+  <main class="flex-1 flex flex-col items-center justify-start sm:pt-12 md:pt-24 sm:px-4 md:px-6 w-full">
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-semibold text-white">Cyber OSINT</h1>
+      <p class="text-sm text-gray-400 mt-2">IP / 도메인 기반 OSINT 검색 엔진</p>
+    </div>
+
+    <!-- 검색창 -->
+    <div class="w-full max-w-xl">
+      <div class="flex items-center shadow-xl rounded-full border border-blue-700 overflow-hidden">
         <input
           id="input"
           type="text"
-          placeholder="도메인 또는 IP 입력 (예: naver.com, 8.8.8.8)"
-          class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+          placeholder="도메인 또는 IP 입력 (예: google.com, 8.8.8.8)"
+          class="w-full px-6 py-3 text-base bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
-<button
-  onclick="fetchData()"
-  class="inline-flex items-center whitespace-nowrap gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-5 py-2.5 rounded-xl shadow-md transition duration-200 ease-in-out"
->
-  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6a4 4 0 014 4v1h2a2 2 0 012 2v3H6v-3a2 2 0 012-2h2v-1a4 4 0 014-4z" />
-  </svg>
-  <span>검색</span>
-</button>
+        <button
+          onclick="fetchData()"
+          class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 flex items-center justify-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+          </svg>
+          Search
+        </button>
       </div>
     </div>
-    <div id="result" class="p-6 border-t border-gray-100 space-y-4 text-sm text-gray-800"></div>
-  </div>
+
+    <!-- 결과 -->
+    <div id="result" class="w-full max-w-3xl mt-10 space-y-6"></div>
+  </main>
 
   <script>
+    // Load search history on startup
+    document.addEventListener("DOMContentLoaded", loadHistory);
     document.getElementById('input').addEventListener('keypress', function (e) {
       if (e.key === 'Enter') fetchData();
     });
+
+    function saveToHistory(query) {
+      let history = JSON.parse(localStorage.getItem('osint_history') || '[]');
+      history = history.filter(item => item !== query); // 중복 제거
+      history.unshift(query); // 앞에 추가
+      if (history.length > 20) history.pop(); // 최대 20개
+      localStorage.setItem('osint_history', JSON.stringify(history));
+      loadHistory();
+    }
+
+    function loadHistory() {
+      const historyList = document.getElementById('historyList');
+      const history = JSON.parse(localStorage.getItem('osint_history') || '[]');
+      historyList.innerHTML = history.map(item => `
+      <li onclick="searchFromHistory('${item}')" class="hover:text-blue-200">${item}</li>
+      `).join('');
+    }
+
+    function clearHistory() {
+      localStorage.removeItem('osint_history');
+      loadHistory();
+    }
+
+    function searchFromHistory(query) {
+      document.getElementById('input').value = query;
+      fetchData();
+    }
 
     async function resolveDomain(domain) {
       const res = await axios.get(`https://dns.google/resolve?name=${domain}&type=A`);
@@ -48,15 +93,18 @@
     async function fetchData() {
       const input = document.getElementById('input').value.trim();
       const resultEl = document.getElementById('result');
-      resultEl.innerHTML = '<div class="text-gray-500">🔄 검색 중...</div>';
+      resultEl.innerHTML = '<div class="text-gray-400 text-sm">🔄 검색 중...</div>';
+
+      if (!input) {
+        resultEl.innerHTML = '<div class="text-red-400 text-sm">⚠ 검색어를 입력해주세요.</div>';
+        return;
+      }
 
       try {
+        saveToHistory(input);
         let ip = input;
         const isDomain = isNaN(Number(input.split('.')[0]));
-
-        if (isDomain) {
-          ip = await resolveDomain(input);
-        }
+        if (isDomain) ip = await resolveDomain(input);
 
         const [shodanRes, ipinfoRes] = await Promise.all([
           axios.get(`https://internetdb.shodan.io/${ip}`),
@@ -70,59 +118,37 @@
           org: ipinfoRes.data.org || '',
         };
 
-        resultEl.innerHTML = `
-          <div class="text-sm text-gray-400">@${ip}</div>
-          <div class="font-semibold text-lg mb-1">💻 검색 결과</div>
+        let subdomainsHtml = '';
 
-          ${renderSection('호스트네임', data.hostnames)}
-          ${renderSection('포트', data.ports, '🔌')}
-          ${renderListSection('CPE 목록', data.cpes)}
-          ${renderSection('⚠️ 취약점', data.vulns, '', 'bg-red-100 text-red-700')}
-          ${renderSection('🏷️ 태그', data.tags, '#')}
-          ${renderJaFingerprints(data)}
-          ${renderIpinfoSection(data)}
+        if (isDomain) {
+          subdomainsHtml = await fetchSubdomains(input);
+        }
+
+        resultEl.innerHTML = `
+          <div class="bg-gray-800 rounded-lg p-6 shadow-xl border border-blue-700">
+            <div class="text-xl font-semibold mb-4 text-white">💡 ${input} 검색 결과</div>
+            ${renderSection('호스트네임', data.hostnames)}
+            ${renderSection('IP 주소', [ip], '🌐')}
+            ${renderSection('포트', data.ports, '🔌')}
+            ${renderListSection('CPE 목록', data.cpes)}
+            ${renderSection('⚠️ 취약점', data.vulns, '', 'bg-red-700 text-red-200')}
+            ${renderSection('🏷️ 태그', data.tags, '#')}
+            ${renderJaFingerprints(data)}
+            ${renderIpinfoSection(data)}
+            ${subdomainsHtml}
+          </div>
         `;
 
         if (isDomain) {
-          // 서브도메인 정보
-          const subBox = document.createElement('div');
-          subBox.id = 'subdomains';
-          subBox.innerHTML = `
-            <div>
-              <strong class="block text-gray-600 mt-4">🌐 서브도메인 (certspotter)</strong>
-              <div class="text-gray-500 text-xs">🔄 서브도메인 불러오는 중...</div>
-            </div>
-          `;
-          resultEl.appendChild(subBox);
-          fetchSubdomains(input);
-
-          // 인증서 정보
           const certBox = document.createElement('div');
           certBox.id = 'crtsh';
-          certBox.innerHTML = `
-            <div>
-              <strong class="block text-gray-600 mt-4">📄 인증서 정보 (crt.sh)</strong>
-              <div class="text-gray-500 text-xs">🔄 인증서 정보 불러오는 중...</div>
-            </div>
-          `;
+          certBox.innerHTML = `<div class="text-sm text-gray-400">📄 인증서 정보 불러오는 중...</div>`;
           resultEl.appendChild(certBox);
-          fetchCrtshData(input);
+                    fetchCrtshData(input);
         }
 
       } catch (e) {
-        resultEl.innerHTML = `<div class="text-red-500 font-medium">⚠ ${e.message}</div>`;
-      }
-    }
-
-    async function fetchCrtshData(domain) {
-      try {
-        const res = await axios.get(`https://crt.sh/?q=${domain}&output=json`);
-        const certs = res.data.slice(0, 10);
-        const crtshEl = document.getElementById('crtsh');
-        crtshEl.innerHTML = renderCertsSection(certs);
-      } catch (err) {
-        document.getElementById('crtsh').innerHTML =
-          `<div class="text-red-500 text-sm mt-2">⚠ 인증서 정보를 불러올 수 없습니다.</div>`;
+        resultEl.innerHTML = `<div class="text-red-400 text-sm font-medium">⚠ ${e.message}</div>`;
       }
     }
 
@@ -131,20 +157,30 @@
         const res = await axios.get(`https://api.certspotter.com/v1/issuances?domain=${domain}&include_subdomains=true&expand=dns_names`);
         const rawDnsNames = res.data.flatMap(entry => entry.dns_names);
         const unique = [...new Set(rawDnsNames)].sort();
-        document.getElementById('subdomains').innerHTML = renderSection('발견된 서브도메인', unique, '🔸');
-      } catch (err) {
-        document.getElementById('subdomains').innerHTML =
-          `<div class="text-red-500 text-sm mt-2">⚠ 서브도메인 정보를 불러올 수 없습니다.</div>`;
+        return renderSection('🔸 서브도메인', unique);
+      } catch {
+        return `<div class="text-red-400 text-sm">⚠ 서브도메인 정보를 불러올 수 없습니다.</div>`;
       }
     }
 
-    function renderSection(title, items = [], prefix = '', badgeClass = 'bg-gray-100 text-gray-700') {
+    async function fetchCrtshData(domain) {
+      try {
+        const res = await axios.get(`https://crt.sh/?q=${domain}&output=json`);
+        const certs = res.data.slice(0, 5);
+        document.getElementById('crtsh').innerHTML = renderCertsSection(certs);
+      } catch {
+        document.getElementById('crtsh').innerHTML =
+          `<div class="text-red-400 text-sm">⚠ 인증서 정보를 불러올 수 없습니다.</div>`;
+      }
+    }
+
+    function renderSection(title, items = [], prefix = '', badgeClass = 'bg-gray-700 text-gray-200') {
       if (!items || items.length === 0) return '';
       return `
-        <div>
-          <strong class="block text-gray-600">${title}</strong>
-          <div class="flex flex-wrap gap-2 mt-1">
-            ${items.map(i => `<span class="px-2 py-1 rounded-full text-xs ${badgeClass}">${prefix} ${i}</span>`).join('')}
+        <div class="mb-4">
+          <div class="text-gray-400 font-medium mb-1">${title}</div>
+          <div class="flex flex-wrap gap-2">
+            ${items.map(i => `<span class="text-xs px-2 py-1 rounded-full ${badgeClass}">${prefix} ${i}</span>`).join('')}
           </div>
         </div>
       `;
@@ -153,9 +189,9 @@
     function renderListSection(title, items = []) {
       if (!items || items.length === 0) return '';
       return `
-        <div>
-          <strong class="block text-gray-600">${title}</strong>
-          <ul class="list-disc ml-5 mt-1 text-gray-700 text-sm space-y-1">
+        <div class="mb-4">
+          <div class="text-gray-400 font-medium mb-1">${title}</div>
+          <ul class="list-disc ml-5 text-sm text-gray-400 space-y-1">
             ${items.map(i => `<li>${i}</li>`).join('')}
           </ul>
         </div>
@@ -163,16 +199,15 @@
     }
 
     function renderJaFingerprints(data) {
-      const hasAny = data.ja3 || data.ja3s || data.ja4 || data.ja4s;
-      if (!hasAny) return '';
+      if (!data.ja3 && !data.ja3s && !data.ja4 && !data.ja4s) return '';
       return `
-        <div>
-          <strong class="block text-gray-600">🔐 TLS 핑거프린트</strong>
-          <div class="grid grid-cols-1 gap-1 text-sm text-gray-700 mt-1">
-            ${data.ja3 ? `<div><span class="font-semibold">JA3:</span> ${data.ja3}</div>` : ''}
-            ${data.ja3s ? `<div><span class="font-semibold">JA3S:</span> ${data.ja3s}</div>` : ''}
-            ${data.ja4 ? `<div><span class="font-semibold">JA4:</span> ${data.ja4}</div>` : ''}
-            ${data.ja4s ? `<div><span class="font-semibold">JA4S:</span> ${data.ja4s}</div>` : ''}
+        <div class="mb-4">
+          <div class="text-gray-400 font-medium mb-1">🔐 TLS 핑거프린트</div>
+          <div class="space-y-1 text-sm text-gray-400">
+            ${data.ja3 ? `<div><strong>JA3:</strong> ${data.ja3}</div>` : ''}
+            ${data.ja3s ? `<div><strong>JA3S:</strong> ${data.ja3s}</div>` : ''}
+            ${data.ja4 ? `<div><strong>JA4:</strong> ${data.ja4}</div>` : ''}
+            ${data.ja4s ? `<div><strong>JA4S:</strong> ${data.ja4s}</div>` : ''}
           </div>
         </div>
       `;
@@ -181,34 +216,30 @@
     function renderIpinfoSection(data) {
       if (!data.country && !data.org) return '';
       return `
-        <div>
-          <strong class="block text-gray-600">📍 네트워크 정보</strong>
-          <div class="text-sm text-gray-700 space-y-1 mt-1">
-            ${data.country ? `<div><span class="font-semibold">국가:</span> ${data.country}</div>` : ''}
-            ${data.org ? `<div><span class="font-semibold">ASN:</span> ${data.org}</div>` : ''}
+        <div class="mb-4">
+          <div class="text-gray-400 font-medium mb-1">📍 네트워크 정보</div>
+          <div class="text-sm text-gray-400 space-y-1">
+            ${data.country ? `<div><strong>국가:</strong> ${data.country}</div>` : ''}
+            ${data.org ? `<div><strong>ASN:</strong> ${data.org}</div>` : ''}
           </div>
         </div>
       `;
     }
 
     function renderCertsSection(certs = []) {
-      if (!certs || certs.length === 0) {
-        return `<div class="text-sm text-gray-500 mt-2">표시할 인증서 정보가 없습니다.</div>`;
-      }
+      if (!certs || certs.length === 0) return '<div class="text-sm text-gray-400">표시할 인증서 정보가 없습니다.</div>';
       return `
-        <div>
-          <strong class="block text-gray-600 mt-4">📄 인증서 정보 (crt.sh)</strong>
-          <div class="space-y-2 mt-2 text-xs text-gray-800">
-            ${certs.map(cert => `
-              <div class="border p-2 rounded bg-gray-50">
-                <div><strong>📛 Common Name:</strong> ${cert.common_name}</div>
-                <div><strong>📥 Name Value:</strong> ${cert.name_value.replace(/\n/g, ', ')}</div>
-                <div><strong>🏢 Issuer:</strong> ${cert.issuer_name}</div>
-                <div><strong>🕓 등록:</strong> ${cert.entry_timestamp}</div>
-                <div><strong>✅ 유효기간:</strong> ${cert.not_before} ~ ${cert.not_after}</div>
-              </div>
-            `).join('')}
-          </div>
+        <div class="mt-4 space-y-4">
+          <div class="text-gray-400 font-medium">📄 인증서 정보 (crt.sh)</div>
+          ${certs.map(cert => `
+            <div class="p-3 border rounded-md bg-gray-800 shadow-sm text-xs space-y-1 text-gray-400">
+              <div><strong>📛 Common Name:</strong> ${cert.common_name}</div>
+              <div><strong>📥 Name Value:</strong> ${cert.name_value.replace(/\n/g, ', ')}</div>
+              <div><strong>🏢 Issuer:</strong> ${cert.issuer_name}</div>
+              <div><strong>🕓 등록:</strong> ${cert.entry_timestamp}</div>
+              <div><strong>✅ 유효기간:</strong> ${cert.not_before} ~ ${cert.not_after}</div>
+            </div>
+          `).join('')}
         </div>
       `;
     }
