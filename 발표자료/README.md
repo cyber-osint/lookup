@@ -11,7 +11,7 @@
 * 누구나 쉽게 사용할 수 있는 **IP / 도메인 기반 OSINT 검색 툴** 제공
 * 다양한 무료 API를 통합하여 **실시간 정보 조회** 가능
 * **Shodan, ipinfo, Certspotter, dns.google 등** 데이터를 간편하게 확인
-* CyberChef와 같이 백엔드 없이 동작할 수 있는 도구
+* **CyberChef**와 같이 백엔드 없이 동작할 수 있는 도구
 
 ---
 
