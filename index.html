@@ -22,16 +22,21 @@
     obscureTextEmails: false,
   };
     async function getUser() {
-    try {
-      const res = await fetch("https://api.ipify.org?format=json");
-      const data = await res.json();
-      return data.ip;
-    } catch (err) {
-      console.error("IP 가져오기 실패:", err);
-      return "unknown";
+      try {
+        const res = await fetch("https://api.ipify.org?format=json");
+        const data = await res.json();
+        return data.ip;
+      } catch (err) {
+        console.error("IP 가져오기 실패:", err);
+        return "unknown";
+      }
     }
-  }
-    var startOpts = { userID: getUser() };
+
+    async function init() {
+      const ip = await getUser();
+
+      // IP 값을 기반으로 userID 설정
+  const startOpts = { userID: ip };
   (function(A,s,a,y,e,r){
     r=window.OpenReplay=[e,r,y,[s-1, e]];
     s=document.createElement('script');s.src=A;s.async=!a;
