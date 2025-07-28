@@ -49,7 +49,6 @@
   </main>
 
   <script>
-    // Load search history on startup
     document.addEventListener("DOMContentLoaded", loadHistory);
     document.getElementById('input').addEventListener('keypress', function (e) {
       if (e.key === 'Enter') fetchData();
@@ -57,9 +56,9 @@
 
     function saveToHistory(query) {
       let history = JSON.parse(localStorage.getItem('osint_history') || '[]');
-      history = history.filter(item => item !== query); // 중복 제거
-      history.unshift(query); // 앞에 추가
-      if (history.length > 20) history.pop(); // 최대 20개
+      history = history.filter(item => item !== query);
+      history.unshift(query);
+      if (history.length > 20) history.pop();
       localStorage.setItem('osint_history', JSON.stringify(history));
       loadHistory();
     }
@@ -68,7 +67,7 @@
       const historyList = document.getElementById('historyList');
       const history = JSON.parse(localStorage.getItem('osint_history') || '[]');
       historyList.innerHTML = history.map(item => `
-      <li onclick="searchFromHistory('${item}')" class="hover:text-blue-200">${item}</li>
+        <li onclick="searchFromHistory('${item}')" class="hover:text-blue-200">${item}</li>
       `).join('');
     }
 
@@ -116,10 +115,12 @@
           resolvedIp: ip,
           country: ipinfoRes.data.country || '',
           org: ipinfoRes.data.org || '',
+          city: ipinfoRes.data.city || '',
+          region: ipinfoRes.data.region || '',
+          timezone: ipinfoRes.data.timezone || '',
         };
 
         let subdomainsHtml = '';
-
         if (isDomain) {
           subdomainsHtml = await fetchSubdomains(input);
         }
@@ -144,7 +145,7 @@
           certBox.id = 'crtsh';
           certBox.innerHTML = `<div class="text-sm text-gray-400">📄 인증서 정보 불러오는 중...</div>`;
           resultEl.appendChild(certBox);
-                    fetchCrtshData(input);
+          fetchCrtshData(input);
         }
 
       } catch (e) {
@@ -214,12 +215,15 @@
     }
 
     function renderIpinfoSection(data) {
-      if (!data.country && !data.org) return '';
+      if (!data.country && !data.org && !data.city && !data.region && !data.timezone) return '';
       return `
         <div class="mb-4">
           <div class="text-gray-400 font-medium mb-1">📍 네트워크 정보</div>
           <div class="text-sm text-gray-400 space-y-1">
             ${data.country ? `<div><strong>국가:</strong> ${data.country}</div>` : ''}
+            ${data.region ? `<div><strong>지역:</strong> ${data.region}</div>` : ''}
+            ${data.city ? `<div><strong>도시:</strong> ${data.city}</div>` : ''}
+            ${data.timezone ? `<div><strong>타임존:</strong> ${data.timezone}</div>` : ''}
             ${data.org ? `<div><strong>ASN:</strong> ${data.org}</div>` : ''}
           </div>
         </div>
