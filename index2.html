@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cyber OSINT Search</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white min-h-screen flex flex-col items-center justify-start pt-24 font-sans text-gray-800">
+
+  <!-- 로고/타이틀 -->
+  <div class="text-center mb-8">
+    <h1 class="text-4xl font-semibold text-gray-700">Cyber OSINT</h1>
+    <p class="text-sm text-gray-500 mt-2">IP / 도메인 기반 정보 탐색기</p>
+  </div>
+
+  <!-- 검색창 -->
+  <div class="w-full max-w-xl px-4">
+    <div class="flex items-center shadow-md rounded-full border border-gray-300 overflow-hidden">
+      <input
+        id="input"
+        type="text"
+        placeholder="도메인 또는 IP 입력 (예: naver.com, 8.8.8.8)"
+        class="w-full px-6 py-3 text-base focus:outline-none"
+      />
+      <button
+        onclick="fetchData()"
+        class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 text-sm font-semibold transition"
+      >
+        검색
+      </button>
+    </div>
+  </div>
+
+  <!-- 결과 출력 -->
+  <div id="result" class="w-full max-w-3xl mt-10 px-4 space-y-6"></div>
+
+  <script>
+    document.getElementById('input').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') fetchData();
+    });
+
+    async function resolveDomain(domain) {
+      const res = await axios.get(`https://dns.google/resolve?name=${domain}&type=A`);
+      const answers = res.data.Answer || [];
+      const ipAnswer = answers.reverse().find(a => a.type === 1);
+      if (!ipAnswer) throw new Error("IP 주소를 찾을 수 없습니다.");
+      return ipAnswer.data;
+    }
+
+    async function fetchData() {
+      const input = document.getElementById('input').value.trim();
+      const resultEl = document.getElementById('result');
+      resultEl.innerHTML = '<div class="text-gray-400 text-sm">🔄 검색 중...</div>';
+
+      try {
+        let ip = input;
+        const isDomain = isNaN(Number(input.split('.')[0]));
+        if (isDomain) ip = await resolveDomain(input);
+
+        const [shodanRes, ipinfoRes] = await Promise.all([
+          axios.get(`https://internetdb.shodan.io/${ip}`),
+          axios.get(`https://ipinfo.io/${ip}/json`)
+        ]);
+
+        const data = {
+          ...shodanRes.data,
+          resolvedIp: ip,
+          country: ipinfoRes.data.country || '',
+          org: ipinfoRes.data.org || '',
+        };
+
+        resultEl.innerHTML = `
+          <div class="bg-gray-50 rounded-lg p-6 shadow border border-gray-200">
+            <div class="text-xs text-gray-500 mb-1">📍 ${ip}</div>
+            <div class="text-xl font-semibold mb-4">💡 검색 결과</div>
+            ${renderSection('호스트네임', data.hostnames)}
+            ${renderSection('포트', data.ports, '🔌')}
+            ${renderListSection('CPE 목록', data.cpes)}
+            ${renderSection('⚠️ 취약점', data.vulns, '', 'bg-red-100 text-red-700')}
+            ${renderSection('🏷️ 태그', data.tags, '#')}
+            ${renderJaFingerprints(data)}
+            ${renderIpinfoSection(data)}
+          </div>
+        `;
+
+        if (isDomain) {
+          const subBox = document.createElement('div');
+          subBox.id = 'subdomains';
+          subBox.innerHTML = `<div class="text-sm text-gray-500">🌐 서브도메인 불러오는 중...</div>`;
+          resultEl.appendChild(subBox);
+          fetchSubdomains(input);
+
+          const certBox = document.createElement('div');
+          certBox.id = 'crtsh';
+          certBox.innerHTML = `<div class="text-sm text-gray-500">📄 인증서 정보 불러오는 중...</div>`;
+          resultEl.appendChild(certBox);
+          fetchCrtshData(input);
+        }
+
+      } catch (e) {
+        resultEl.innerHTML = `<div class="text-red-500 text-sm font-medium">⚠ ${e.message}</div>`;
+      }
+    }
+
+    async function fetchSubdomains(domain) {
+      try {
+        const res = await axios.get(`https://api.certspotter.com/v1/issuances?domain=${domain}&include_subdomains=true&expand=dns_names`);
+        const rawDnsNames = res.data.flatMap(entry => entry.dns_names);
+        const unique = [...new Set(rawDnsNames)].sort();
+        document.getElementById('subdomains').innerHTML = renderSection('🔸 서브도메인', unique);
+      } catch {
+        document.getElementById('subdomains').innerHTML =
+          `<div class="text-red-500 text-sm">⚠ 서브도메인 정보를 불러올 수 없습니다.</div>`;
+      }
+    }
+
+    async function fetchCrtshData(domain) {
+      try {
+        const res = await axios.get(`https://crt.sh/?q=${domain}&output=json`);
+        const certs = res.data.slice(0, 5);
+        document.getElementById('crtsh').innerHTML = renderCertsSection(certs);
+      } catch {
+        document.getElementById('crtsh').innerHTML =
+          `<div class="text-red-500 text-sm">⚠ 인증서 정보를 불러올 수 없습니다.</div>`;
+      }
+    }
+
+    function renderSection(title, items = [], prefix = '', badgeClass = 'bg-gray-100 text-gray-700') {
+      if (!items || items.length === 0) return '';
+      return `
+        <div class="mb-4">
+          <div class="text-gray-600 font-medium mb-1">${title}</div>
+          <div class="flex flex-wrap gap-2">
+            ${items.map(i => `<span class="text-xs px-2 py-1 rounded-full ${badgeClass}">${prefix} ${i}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderListSection(title, items = []) {
+      if (!items || items.length === 0) return '';
+      return `
+        <div class="mb-4">
+          <div class="text-gray-600 font-medium mb-1">${title}</div>
+          <ul class="list-disc ml-5 text-sm text-gray-700 space-y-1">
+            ${items.map(i => `<li>${i}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    function renderJaFingerprints(data) {
+      if (!data.ja3 && !data.ja3s && !data.ja4 && !data.ja4s) return '';
+      return `
+        <div class="mb-4">
+          <div class="text-gray-600 font-medium mb-1">🔐 TLS 핑거프린트</div>
+          <div class="space-y-1 text-sm">
+            ${data.ja3 ? `<div><strong>JA3:</strong> ${data.ja3}</div>` : ''}
+            ${data.ja3s ? `<div><strong>JA3S:</strong> ${data.ja3s}</div>` : ''}
+            ${data.ja4 ? `<div><strong>JA4:</strong> ${data.ja4}</div>` : ''}
+            ${data.ja4s ? `<div><strong>JA4S:</strong> ${data.ja4s}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderIpinfoSection(data) {
+      if (!data.country && !data.org) return '';
+      return `
+        <div class="mb-4">
+          <div class="text-gray-600 font-medium mb-1">📍 네트워크 정보</div>
+          <div class="text-sm text-gray-700 space-y-1">
+            ${data.country ? `<div><strong>국가:</strong> ${data.country}</div>` : ''}
+            ${data.org ? `<div><strong>ASN:</strong> ${data.org}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCertsSection(certs = []) {
+      if (!certs || certs.length === 0) return '<div class="text-sm text-gray-500">표시할 인증서 정보가 없습니다.</div>';
+      return `
+        <div class="mt-4 space-y-4">
+          <div class="text-gray-600 font-medium">📄 인증서 정보 (crt.sh)</div>
+          ${certs.map(cert => `
+            <div class="p-3 border rounded-md bg-white shadow-sm text-xs space-y-1">
+              <div><strong>📛 Common Name:</strong> ${cert.common_name}</div>
+              <div><strong>📥 Name Value:</strong> ${cert.name_value.replace(/\n/g, ', ')}</div>
+              <div><strong>🏢 Issuer:</strong> ${cert.issuer_name}</div>
+              <div><strong>🕓 등록:</strong> ${cert.entry_timestamp}</div>
+              <div><strong>✅ 유효기간:</strong> ${cert.not_before} ~ ${cert.not_after}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
