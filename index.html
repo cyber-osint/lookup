@@ -22,7 +22,28 @@
     obscureTextNumbers: false,
     obscureTextEmails: false,
   };
-  var startOpts = { userID: "hacker" };
+    async function getUserID() {
+    try {
+      const res = await fetch("https://api.ipify.org?format=json");
+      const data = await res.json();
+      return data.ip;
+    } catch (err) {
+      console.error("IP 가져오기 실패:", err);
+      return "unknown";
+    }
+  }
+
+  // 초기화
+  (async () => {
+    const ip = await getUserID();
+    var startOpts = { userID: ip };
+
+    // 예: 콘솔에 확인
+    console.log("User ID (IP):", startOpts.userID);
+
+    // 예: OpenReplay 또는 기타 추적기에 넣기
+    // tracker.setUserID(startOpts.userID);
+  })();
   (function(A,s,a,y,e,r){
     r=window.OpenReplay=[e,r,y,[s-1, e]];
     s=document.createElement('script');s.src=A;s.async=!a;
