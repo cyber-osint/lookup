@@ -21,38 +21,52 @@
     obscureTextNumbers: false,
     obscureTextEmails: false,
   };
-    async function getUser() {
-      try {
-        const res = await fetch("https://api.ipify.org?format=json");
-        const data = await res.json();
-        return data.ip;
-      } catch (err) {
-        console.error("IP 가져오기 실패:", err);
-        return "unknown";
-      }
+
+  // OpenReplay 초기화 함수 정의
+  (function (A, s, a, y, e, r) {
+    r = window.OpenReplay = [e, r, y, [s - 1, e]];
+    s = document.createElement('script');
+    s.src = A;
+    s.async = !a;
+    document.getElementsByTagName('head')[0].appendChild(s);
+
+    r.start = function (v) { r.push([0]) };
+    r.stop = function (v) { r.push([1]) };
+    r.setUserID = function (id) { r.push([2, id]) };
+    r.setUserAnonymousID = function (id) { r.push([3, id]) };
+    r.setMetadata = function (k, v) { r.push([4, k, v]) };
+    r.event = function (k, p, i) { r.push([5, k, p, i]) };
+    r.issue = function (k, p) { r.push([6, k, p]) };
+    r.isActive = function () { return false };
+    r.getSessionToken = function () { };
+  })("//static.openreplay.com/latest/openreplay-assist.js", 1, 0, initOpts, null);
+
+  // 사용자 IP를 가져와 userID로 설정
+  async function getUserIP() {
+    try {
+      const res = await fetch("https://api.ipify.org?format=json");
+      const data = await res.json();
+      return data.ip;
+    } catch (err) {
+      console.error("IP 가져오기 실패:", err);
+      return "unknown";
+    }
+  }
+
+  // 초기화
+  async function init() {
+    const ip = await getUserIP();
+
+    if (window.OpenReplay && typeof OpenReplay.setUserID === 'function') {
+      OpenReplay.setUserID(ip);  // IP를 userID로 설정
     }
 
-    async function init() {
-      const ip = await getUser();
+    if (window.OpenReplay && typeof OpenReplay.start === 'function') {
+      OpenReplay.start();
+    }
+  }
 
-      // IP 값을 기반으로 userID 설정
-  const startOpts = { userID: ip };
-
-  }  init();
-  (function(A,s,a,y,e,r){
-    r=window.OpenReplay=[e,r,y,[s-1, e]];
-    s=document.createElement('script');s.src=A;s.async=!a;
-    document.getElementsByTagName('head')[0].appendChild(s);
-    r.start=function(v){r.push([0])};
-    r.stop=function(v){r.push([1])};
-    r.setUserID=function(id){r.push([2,id])};
-    r.setUserAnonymousID=function(id){r.push([3,id])};
-    r.setMetadata=function(k,v){r.push([4,k,v])};
-    r.event=function(k,p,i){r.push([5,k,p,i])};
-    r.issue=function(k,p){r.push([6,k,p])};
-    r.isActive=function(){return false};
-    r.getSessionToken=function(){};
-  })("//static.openreplay.com/latest/openreplay-assist.js",1,0,initOpts,startOpts);
+  init();
 </script>
 
 </head>
