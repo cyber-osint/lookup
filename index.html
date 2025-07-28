@@ -18,10 +18,15 @@
           placeholder="도메인 또는 IP 입력 (예: naver.com, 8.8.8.8)"
           class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
-        <button
-          onclick="fetchData()"
-          class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg"
-        >검색</button>
+<button
+  onclick="fetchData()"
+  class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-5 py-2.5 rounded-xl shadow-md transition duration-200 ease-in-out"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6a4 4 0 014 4v1h2a2 2 0 012 2v3H6v-3a2 2 0 012-2h2v-1a4 4 0 014-4z" />
+  </svg>
+  검색
+</button>
       </div>
     </div>
     <div id="result" class="p-6 border-t border-gray-100 space-y-4 text-sm text-gray-800"></div>
