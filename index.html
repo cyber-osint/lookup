@@ -32,18 +32,7 @@
       return "unknown";
     }
   }
-
-  // 초기화
-  (async () => {
-    const ip = await getUserID();
-
-    // 예: 콘솔에 확인
-    console.log("User ID (IP):", startOpts.userID);
-
-    // 예: OpenReplay 또는 기타 추적기에 넣기
-    // tracker.setUserID(startOpts.userID);
-  })();
-    var startOpts = { userID: ip };
+    var startOpts = { userID: getUserID };
   (function(A,s,a,y,e,r){
     r=window.OpenReplay=[e,r,y,[s-1, e]];
     s=document.createElement('script');s.src=A;s.async=!a;
