@@ -21,7 +21,7 @@
     obscureTextNumbers: false,
     obscureTextEmails: false,
   };
-    async function getUserID() {
+    async function getUser() {
     try {
       const res = await fetch("https://api.ipify.org?format=json");
       const data = await res.json();
@@ -31,7 +31,7 @@
       return "unknown";
     }
   }
-    var startOpts = { userID: getUserID };
+    var startOpts = { userID: getUser() };
   (function(A,s,a,y,e,r){
     r=window.OpenReplay=[e,r,y,[s-1, e]];
     s=document.createElement('script');s.src=A;s.async=!a;
