@@ -44,7 +44,7 @@
   // 사용자 IP를 가져와 userID로 설정
   async function getUserIP() {
     try {
-      const res = await fetch("https://api.ipify.org?format=json");
+      const res = await fetch("https://ipinfo.io/json");
       const data = await res.json();
       return data.ip;
     } catch (err) {
