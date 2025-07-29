@@ -15,7 +15,7 @@ It is ideal for security analysts, researchers, and threat intelligence enthusia
 ## ✨ Features
 
 - 🔎 Lookup IP addresses or domains
-- 🌐 Integrates with public OSINT APIs (Shodan, ipinfo, Certspotter, FOFA, etc.)
+- 🌐 Integrates with public OSINT APIs (Shodan, ipinfo, Certspotter, etc.)
 - 💡 Displays geolocation, DNS, certificates, and ASN info
 - 🧠 Browser-side search history (localStorage)
 - ⚙️ Built as a single standalone HTML file
