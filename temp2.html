@@ -249,14 +249,39 @@
     }
 
     function copyToClipboard(text) {
-      navigator.clipboard.writeText(text).then(() => {
-        // 간단한 토스트 알림
-        const toast = document.createElement('div');
-        toast.className = 'fixed top-4 right-4 bg-green-500/90 text-white px-4 py-2 rounded-xl z-50 animate-slide-up';
-        toast.textContent = '클립보드에 복사되었습니다!';
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2000);
-      });
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('클립보드에 복사되었습니다!', 'success');
+        }).catch(() => {
+          showToast('복사에 실패했습니다.', 'error');
+        });
+      } else {
+        // 폴백 방법
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          showToast('클립보드에 복사되었습니다!', 'success');
+        } catch (err) {
+          showToast('복사에 실패했습니다.', 'error');
+        }
+        document.body.removeChild(textArea);
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      const bgColor = type === 'success' ? 'bg-green-500/90' : 'bg-red-500/90';
+      toast.className = `fixed top-4 right-4 ${bgColor} text-white px-4 py-2 rounded-xl z-50 animate-slide-up`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.remove();
+        }
+      }, 2000);
     }
   </script>
 </body>
@@ -437,9 +462,19 @@
   </main>
 
   <script>
-    document.addEventListener("DOMContentLoaded", loadHistory);
-    document.getElementById('input').addEventListener('keypress', function (e) {
-      if (e.key === 'Enter') fetchData();
+    document.addEventListener("DOMContentLoaded", function() {
+      loadHistory();
+      
+      // 엔터 키 이벤트 리스너 추가
+      const input = document.getElementById('input');
+      if (input) {
+        input.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            fetchData();
+          }
+        });
+      }
     });
 
     function quickSearch(query) {
@@ -448,38 +483,58 @@
     }
 
     function showLoading() {
-      document.getElementById('loadingSpinner').classList.remove('hidden');
+      const spinner = document.getElementById('loadingSpinner');
+      if (spinner) {
+        spinner.classList.remove('hidden');
+      }
     }
 
     function hideLoading() {
-      document.getElementById('loadingSpinner').classList.add('hidden');
+      const spinner = document.getElementById('loadingSpinner');
+      if (spinner) {
+        spinner.classList.add('hidden');
+      }
     }
 
     function saveToHistory(query) {
-      let history = JSON.parse(localStorage.getItem('osint_history') || '[]');
-      history = history.filter(item => item !== query);
-      history.unshift(query);
-      if (history.length > 20) history.pop();
-      localStorage.setItem('osint_history', JSON.stringify(history));
-      loadHistory();
+      try {
+        let history = JSON.parse(localStorage.getItem('osint_history') || '[]');
+        history = history.filter(item => item !== query);
+        history.unshift(query);
+        if (history.length > 20) history.pop();
+        localStorage.setItem('osint_history', JSON.stringify(history));
+        loadHistory();
+      } catch (e) {
+        console.error('History save error:', e);
+      }
     }
 
     function loadHistory() {
-      const historyList = document.getElementById('historyList');
-      const history = JSON.parse(localStorage.getItem('osint_history') || '[]');
-      historyList.innerHTML = history.map(item => `
-        <li onclick="searchFromHistory('${item}')" class="group cursor-pointer p-3 bg-dark-800/50 hover:bg-dark-700/50 rounded-xl transition-all duration-200 border border-dark-700/30 hover:border-cyber-500/30">
-          <div class="flex items-center gap-3">
-            <div class="w-2 h-2 bg-cyber-400 rounded-full group-hover:bg-cyber-300"></div>
-            <span class="text-slate-300 group-hover:text-cyber-300 font-medium">${item}</span>
-          </div>
-        </li>
-      `).join('');
+      try {
+        const historyList = document.getElementById('historyList');
+        if (!historyList) return;
+        
+        const history = JSON.parse(localStorage.getItem('osint_history') || '[]');
+        historyList.innerHTML = history.map(item => `
+          <li onclick="searchFromHistory('${item}')" class="group cursor-pointer p-3 bg-dark-800/50 hover:bg-dark-700/50 rounded-xl transition-all duration-200 border border-dark-700/30 hover:border-cyber-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-2 h-2 bg-cyber-400 rounded-full group-hover:bg-cyber-300"></div>
+              <span class="text-slate-300 group-hover:text-cyber-300 font-medium">${item}</span>
+            </div>
+          </li>
+        `).join('');
+      } catch (e) {
+        console.error('History load error:', e);
+      }
     }
 
     function clearHistory() {
-      localStorage.removeItem('osint_history');
-      loadHistory();
+      try {
+        localStorage.removeItem('osint_history');
+        loadHistory();
+      } catch (e) {
+        console.error('History clear error:', e);
+      }
     }
 
     function searchFromHistory(query) {
@@ -506,10 +561,17 @@
     }
 
     async function fetchData() {
-      const input = document.getElementById('input').value.trim();
+      const input = document.getElementById('input');
       const resultEl = document.getElementById('result');
+      
+      if (!input || !resultEl) {
+        console.error('Required elements not found');
+        return;
+      }
 
-      if (!input) {
+      const inputValue = input.value.trim();
+
+      if (!inputValue) {
         resultEl.innerHTML = `
           <div class="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 backdrop-blur-xl animate-slide-up">
             <div class="flex items-center gap-3">
@@ -531,10 +593,12 @@
       showLoading();
       
       try {
-        saveToHistory(input);
-        let ip = input;
-        const isDomain = isNaN(Number(input.split('.')[0]));
-        if (isDomain) ip = await resolveDomain(input);
+        saveToHistory(inputValue);
+        let ip = inputValue;
+        const isDomain = isNaN(Number(inputValue.split('.')[0]));
+        if (isDomain) {
+          ip = await resolveDomain(inputValue);
+        }
 
         const [shodanRes, ipinfoRes, ipqueryRisk] = await Promise.all([
           axios.get(`https://internetdb.shodan.io/${ip}`),
@@ -555,7 +619,7 @@
 
         let subdomainsHtml = '';
         if (isDomain) {
-          subdomainsHtml = await fetchSubdomains(input);
+          subdomainsHtml = await fetchSubdomains(inputValue);
         }
 
         resultEl.innerHTML = `
@@ -566,7 +630,7 @@
                   <span class="text-xl">🎯</span>
                 </div>
                 <div>
-                  <h2 class="text-2xl font-black text-slate-100">${input}</h2>
+                  <h2 class="text-2xl font-black text-slate-100">${inputValue}</h2>
                   <p class="text-slate-400">분석 결과</p>
                 </div>
               </div>
@@ -614,10 +678,11 @@
             </div>
           `;
           resultEl.appendChild(certBox);
-          fetchCrtshData(input);
+          fetchCrtshData(inputValue);
         }
 
       } catch (e) {
+        console.error('Fetch error:', e);
         resultEl.innerHTML = `
           <div class="bg-red-500/10 border border-red-500/20 rounded-3xl p-8 backdrop-blur-xl animate-slide-up">
             <div class="flex items-center gap-4">
