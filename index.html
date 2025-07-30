@@ -157,6 +157,16 @@
       return ipAnswer.data;
     }
 
+    async function fetchIPQueryRisk(ip) {
+      try {
+        const res = await axios.get(`https://api.ipquery.io/${ip}?format=json`);
+        return res.data.risk || null;
+      } catch (e) {
+        console.warn("IPQuery 리스크 정보 조회 실패:", e);
+        return null;
+      }
+    }
+
     async function fetchData() {
       const input = document.getElementById('input').value.trim();
       const resultEl = document.getElementById('result');
@@ -173,9 +183,10 @@
         const isDomain = isNaN(Number(input.split('.')[0]));
         if (isDomain) ip = await resolveDomain(input);
 
-        const [shodanRes, ipinfoRes] = await Promise.all([
+        const [shodanRes, ipinfoRes, ipqueryRisk] = await Promise.all([
           axios.get(`https://internetdb.shodan.io/${ip}`),
-          axios.get(`https://ipinfo.io/${ip}/json`)
+          axios.get(`https://ipinfo.io/${ip}/json`),
+          fetchIPQueryRisk(ip)
         ]);
 
         const data = {
@@ -186,6 +197,7 @@
           city: ipinfoRes.data.city || '',
           region: ipinfoRes.data.region || '',
           timezone: ipinfoRes.data.timezone || '',
+          risk: ipqueryRisk
         };
 
         let subdomainsHtml = '';
@@ -198,11 +210,11 @@
             <div class="text-xl font-semibold mb-4 text-white">💡 ${input} 검색 결과</div>
             ${renderSection('호스트네임', data.hostnames)}
             ${renderSection('IP 주소', [ip], '🌐')}
+            ${renderRiskSection(data.risk)}
             ${renderSection('포트', data.ports, '🔌')}
             ${renderListSection('CPE 목록', data.cpes)}
             ${renderSection('⚠️ 취약점', data.vulns, '', 'bg-red-700 text-red-200')}
             ${renderSection('🏷️ 태그', data.tags, '#')}
-            ${renderJaFingerprints(data)}
             ${renderIpinfoSection(data)}
             ${subdomainsHtml}
           </div>
@@ -219,6 +231,41 @@
       } catch (e) {
         resultEl.innerHTML = `<div class="text-red-400 text-sm font-medium">⚠ ${e.message}</div>`;
       }
+    }
+
+    function renderRiskSection(risk) {
+      if (!risk) return '';
+      
+      const riskItems = [
+        { key: 'is_mobile', label: '📱 모바일', value: risk.is_mobile },
+        { key: 'is_vpn', label: '🔒 VPN', value: risk.is_vpn },
+        { key: 'is_tor', label: '🧅 Tor', value: risk.is_tor },
+        { key: 'is_proxy', label: '🔄 프록시', value: risk.is_proxy },
+        { key: 'is_datacenter', label: '🏢 데이터센터', value: risk.is_datacenter }
+      ];
+
+      const riskScore = risk.risk_score || 0;
+      const scoreColor = riskScore === 0 ? 'text-green-400' : 
+                        riskScore <= 50 ? 'text-yellow-400' : 'text-red-400';
+
+      return `
+        <div class="mb-4">
+          <div class="text-gray-400 font-medium mb-2">🛡️ 리스크 분석</div>
+          <div class="space-y-2">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-400">위험도 점수:</span>
+              <span class="text-sm font-semibold ${scoreColor}">${riskScore}/100</span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              ${riskItems.map(item => {
+                const isActive = item.value === true;
+                const badgeClass = isActive ? 'bg-red-600 text-red-100' : 'bg-gray-700 text-gray-300';
+                return `<span class="text-xs px-2 py-1 rounded-full ${badgeClass}">${item.label}: ${isActive ? 'Yes' : 'No'}</span>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     async function fetchSubdomains(domain) {
@@ -263,21 +310,6 @@
           <ul class="list-disc ml-5 text-sm text-gray-400 space-y-1">
             ${items.map(i => `<li>${i}</li>`).join('')}
           </ul>
-        </div>
-      `;
-    }
-
-    function renderJaFingerprints(data) {
-      if (!data.ja3 && !data.ja3s && !data.ja4 && !data.ja4s) return '';
-      return `
-        <div class="mb-4">
-          <div class="text-gray-400 font-medium mb-1">🔐 TLS 핑거프린트</div>
-          <div class="space-y-1 text-sm text-gray-400">
-            ${data.ja3 ? `<div><strong>JA3:</strong> ${data.ja3}</div>` : ''}
-            ${data.ja3s ? `<div><strong>JA3S:</strong> ${data.ja3s}</div>` : ''}
-            ${data.ja4 ? `<div><strong>JA4:</strong> ${data.ja4}</div>` : ''}
-            ${data.ja4s ? `<div><strong>JA4S:</strong> ${data.ja4s}</div>` : ''}
-          </div>
         </div>
       `;
     }
