@@ -315,21 +315,6 @@
       `;
     }
 
-    function renderJaFingerprints(data) {
-      if (!data.ja3 && !data.ja3s && !data.ja4 && !data.ja4s) return '';
-      return `
-        <div class="mb-4">
-          <div class="text-gray-400 font-medium mb-1">🔐 TLS 핑거프린트</div>
-          <div class="space-y-1 text-sm text-gray-400">
-            ${data.ja3 ? `<div><strong>JA3:</strong> ${data.ja3}</div>` : ''}
-            ${data.ja3s ? `<div><strong>JA3S:</strong> ${data.ja3s}</div>` : ''}
-            ${data.ja4 ? `<div><strong>JA4:</strong> ${data.ja4}</div>` : ''}
-            ${data.ja4s ? `<div><strong>JA4S:</strong> ${data.ja4s}</div>` : ''}
-          </div>
-        </div>
-      `;
-    }
-
     function renderIpinfoSection(data) {
       if (!data.country && !data.org && !data.city && !data.region && !data.timezone) return '';
       return `
