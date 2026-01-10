@@ -184,19 +184,19 @@
                         class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl blur opacity-30 group-hover:opacity-75 transition duration-500">
                     </div>
                     <div
-                        class="relative bg-gray-900/90 ring-1 ring-white/10 rounded-2xl flex items-center p-2 shadow-2xl backdrop-blur-sm">
-                        <input id="input" type="text" placeholder="도메인 또는 IP 입력 (예: google.com, 8.8.8.8)"
-                            class="flex-1 bg-transparent text-white px-4 py-3 text-lg placeholder-gray-500 focus:outline-none font-mono"
+                        class="relative bg-gray-900/90 ring-1 ring-white/10 rounded-2xl flex items-center p-1.5 sm:p-2 shadow-2xl backdrop-blur-sm">
+                        <input id="input" type="text" placeholder="도메인 또는 IP 입력 (예: google.com)"
+                            class="flex-1 bg-transparent text-white px-3 py-2.5 sm:px-4 sm:py-3 text-base sm:text-lg placeholder-gray-500 focus:outline-none font-mono"
                             autocomplete="off" />
                         <button id="searchBtn"
-                            class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-blue-500/40 flex items-center gap-2 transform hover:-translate-y-0.5">
+                            class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 sm:px-8 sm:py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-blue-500/40 flex items-center gap-2 transform hover:-translate-y-0.5">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
                                 fill="currentColor">
                                 <path fill-rule="evenodd"
                                     d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
                                     clip-rule="evenodd" />
                             </svg>
-                            검색
+                            <span class="hidden sm:inline">검색</span>
                         </button>
                     </div>
                 </div>
