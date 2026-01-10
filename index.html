@@ -172,7 +172,8 @@
             </div>
 
             <!-- Search Bar -->
-            <div class="w-full max-w-2xl text-center relative z-20 mb-12 animate-fade-in" style="animation-delay: 0.1s">
+            <div class="w-full max-w-2xl text-center relative z-20 mb-12 animate-fade-in px-4"
+                style="animation-delay: 0.1s">
                 <div class="relative group">
                     <div
                         class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl blur opacity-30 group-hover:opacity-75 transition duration-500">
@@ -482,13 +483,13 @@
             const resultEl = document.getElementById('result');
 
             resultEl.innerHTML = `
-                <div class="result-card bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl animate-fade-in text-left">
-                <div class="flex items-center justify-between mb-8 border-b border-gray-700/50 pb-6">
-                    <div>
+                <div class="result-card bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-8 shadow-2xl animate-fade-in text-left">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 border-b border-gray-700/50 pb-6 gap-4">
+                    <div class="w-full overflow-hidden">
                         <div class="text-sm text-blue-400 font-medium tracking-wider uppercase mb-1">Target</div>
-                        <h2 class="text-3xl font-bold text-white tracking-tight break-all">${input}</h2>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight break-all">${input}</h2>
                     </div>
-                    ${isDomain ? `<div class="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-mono border border-blue-500/30 whitespace-nowrap">DOMAIN</div>` : `<div class="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-xs font-mono border border-green-500/30 whitespace-nowrap">IP ADDR</div>`}
+                    ${isDomain ? `<div class="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-mono border border-blue-500/30 whitespace-nowrap self-start sm:self-auto">DOMAIN</div>` : `<div class="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-xs font-mono border border-green-500/30 whitespace-nowrap self-start sm:self-auto">IP ADDR</div>`}
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
