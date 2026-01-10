@@ -8,7 +8,38 @@
     <meta name="description" content="IP 주소 및 도메인 분석을 위한 고급 OSINT 도구.">
 
     <!-- Tailwind CSS -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: 'var(--background)',
+                        foreground: 'var(--foreground)',
+                        card: 'var(--card)',
+                        cardFor: 'var(--card-foreground)',
+                        popover: 'var(--popover)',
+                        popoverFor: 'var(--popover-foreground)',
+                        primary: 'var(--primary)',
+                        primaryFor: 'var(--primary-foreground)',
+                        secondary: 'var(--secondary)',
+                        secondaryFor: 'var(--secondary-foreground)',
+                        muted: 'var(--muted)',
+                        mutedFor: 'var(--muted-foreground)',
+                        accent: 'var(--accent)',
+                        accentFor: 'var(--accent-foreground)',
+                        destructive: 'var(--destructive)',
+                        destructiveFor: 'var(--destructive-foreground)',
+                        border: 'var(--border)',
+                        input: 'var(--input)',
+                        ring: 'var(--ring)',
+                    }
+                }
+            }
+        }
+    </script>
 
     <!-- Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -22,15 +53,72 @@
     <link rel="icon" href="assets/favicon.png" type="image/png">
 
     <style>
+        :root {
+            /* Light Mode */
+            --background: #f8fafc;
+            --foreground: #0f172a;
+            --card: rgba(255, 255, 255, 0.8);
+            --card-foreground: #0f172a;
+            --popover: #ffffff;
+            --popover-foreground: #0f172a;
+            --primary: #2563eb;
+            --primary-foreground: #f8fafc;
+            --secondary: #e2e8f0;
+            --secondary-foreground: #0f172a;
+            --muted: #f1f5f9;
+            --muted-foreground: #64748b;
+            --accent: #f1f5f9;
+            --accent-foreground: #0f172a;
+            --destructive: #ef4444;
+            --destructive-foreground: #f8fafc;
+            --border: #e2e8f0;
+            --input: #cbd5e1;
+            --ring: #2563eb;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark {
+            /* Dark Mode */
+            --background: #0f172a;
+            --foreground: #e2e8f0;
+            --card: rgba(15, 23, 42, 0.6);
+            --card-foreground: #e2e8f0;
+            --popover: #0f172a;
+            --popover-foreground: #e2e8f0;
+            --primary: #3b82f6;
+            --primary-foreground: #0f172a;
+            --secondary: #1e293b;
+            --secondary-foreground: #e2e8f0;
+            --muted: #1e293b;
+            --muted-foreground: #94a3b8;
+            --accent: #1e293b;
+            --accent-foreground: #e2e8f0;
+            --destructive: #7f1d1d;
+            --destructive-foreground: #e2e8f0;
+            --border: #1e293b;
+            --input: #1e293b;
+            --ring: #1d4ed8;
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
-            color: #e2e8f0;
-            background-image: url('assets/osint-bg.jpg');
+            background-color: var(--background);
+            color: var(--foreground);
+            background-image: none;
+            /* Default no image for light mode logic to start, JS will handle */
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
             background-repeat: no-repeat;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Dark mode background image */
+        .dark body {
+            background-image: url('assets/osint-bg.jpg');
         }
 
         /* Dark overlay for readability */
@@ -69,11 +157,10 @@
 
         /* Glassmorphism Utilities */
         .glass {
-            background: rgba(15, 23, 42, 0.6);
-            /* Darker for better contrast against image */
+            background: var(--glass-bg);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--glass-border);
         }
 
         @keyframes fadeIn {
@@ -145,9 +232,15 @@
     <main
         class="flex-1 flex flex-col relative z-0 h-auto md:h-screen md:overflow-y-auto custom-scrollbar scroll-smooth">
         <!-- Mobile Header (Floating Button) -->
+        <div class="md:hidden absolute top-4 right-16 z-50">
+            <button onclick="toggleTheme()"
+                class="p-3 bg-white/10 dark:bg-gray-900/50 backdrop-blur-md border border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-300 rounded-full shadow-lg hover:bg-gray-100 dark:hover:bg-gray-800/80 transition-all">
+                <span id="themeIconMobile">🌙</span>
+            </button>
+        </div>
         <div class="md:hidden absolute top-4 right-4 z-50">
             <button onclick="toggleSidebar()"
-                class="p-3 bg-gray-900/50 backdrop-blur-md border border-white/10 text-gray-300 rounded-full shadow-lg hover:bg-gray-800/80 transition-all">
+                class="p-3 bg-white/10 dark:bg-gray-900/50 backdrop-blur-md border border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-300 rounded-full shadow-lg hover:bg-gray-100 dark:hover:bg-gray-800/80 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -249,7 +342,40 @@
             initAnalytics();
             loadHistory();
             setupEventListeners();
+            initTheme();
         });
+
+        // Theme Management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                updateThemeIcon(true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                updateThemeIcon(false);
+            }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                updateThemeIcon(false);
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                updateThemeIcon(true);
+            }
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = isDark ? '🌙' : '☀️';
+            const mobileIcon = document.getElementById('themeIconMobile');
+            if (mobileIcon) mobileIcon.textContent = icon;
+            // Add desktop toggle update if/when added
+        }
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
