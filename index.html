@@ -26,10 +26,19 @@
             font-family: 'Inter', sans-serif;
             background-color: #0f172a;
             color: #e2e8f0;
+        }
+
+        /* Fixed Background Image Layer */
+        .fixed-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
             background-image: url('assets/osint-bg.jpg');
             background-size: cover;
             background-position: center;
-            background-attachment: fixed;
             background-repeat: no-repeat;
         }
 
@@ -49,588 +58,607 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
-        /* Custom Scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        /* Glassmorphism Utilities */
-        .glass {
-            background: rgba(15, 23, 42, 0.6);
-            /* Darker for better contrast against image */
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
+        /* ... existing styles ... */
     </style>
 </head>
 
 <body class="min-h-screen flex flex-col md:flex-row overflow-x-hidden md:overflow-hidden relative">
 
+    <!-- Fixed Background Image -->
+    <div class="fixed-bg"></div>
+
     <!-- Background Overlay -->
     <div class="bg-overlay"></div>
 
-    <!-- Background Grid Effect (Optional layer) -->
-    <div class="absolute inset-0 z-0 opacity-10 pointer-events-none"
-        style="background-image: radial-gradient(#4f46e5 1px, transparent 1px); background-size: 32px 32px;">
-    </div>
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    }
 
-    <!-- Mobile Sidebar Backdrop -->
-    <div id="sidebarBackdrop"
-        class="fixed inset-0 bg-black/80 z-20 backdrop-blur-sm hidden md:hidden transition-opacity duration-300"
-        onclick="toggleSidebar()">
-    </div>
+    .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    }
 
-    <!-- Sidebar: History -->
-    <aside
-        class="fixed md:relative top-0 left-0 h-full w-[280px] md:w-80 glass border-r border-white/5 p-6 flex flex-col z-30 transition-transform transform -translate-x-full md:translate-x-0"
-        id="sidebar">
-        <div class="flex items-center gap-3 mb-8 tracking-wide">
-            <div class="bg-blue-600/20 p-2 rounded-lg shadow-lg shadow-blue-500/10 border border-blue-500/30">
-                <img src="assets/icon-history.png" alt="History"
-                    class="h-6 w-6 object-contain filter drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]">
-            </div>
-            <h2 id="history-title" class="text-xl font-bold text-white">검색 기록</h2>
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Glassmorphism Utilities */
+    .glass {
+    background: rgba(15, 23, 42, 0.6);
+    /* Darker for better contrast against image */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    @keyframes fadeIn {
+    from {
+    opacity: 0;
+    transform: translateY(10px);
+    }
+
+    to {
+    opacity: 1;
+    transform: translateY(0);
+    }
+    }
+
+    .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+    }
+    </style>
+    </head>
+
+    <body class="min-h-screen flex flex-col md:flex-row overflow-x-hidden md:overflow-hidden relative">
+
+        <!-- Background Overlay -->
+        <div class="bg-overlay"></div>
+
+        <!-- Background Grid Effect (Optional layer) -->
+        <div class="absolute inset-0 z-0 opacity-10 pointer-events-none"
+            style="background-image: radial-gradient(#4f46e5 1px, transparent 1px); background-size: 32px 32px;">
         </div>
 
-        <div class="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2">
-            <ul id="historyList" class="space-y-1 text-sm text-gray-400">
-                <!-- History items will be injected here -->
-            </ul>
+        <!-- Mobile Sidebar Backdrop -->
+        <div id="sidebarBackdrop"
+            class="fixed inset-0 bg-black/80 z-20 backdrop-blur-sm hidden md:hidden transition-opacity duration-300"
+            onclick="toggleSidebar()">
         </div>
 
-        <div class="mt-6 pt-6 border-t border-white/10">
-            <button id="clearHistoryBtn"
-                class="w-full text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 py-2 rounded transition-colors flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                <span id="clear-history-text">기록 전체 삭제</span>
-            </button>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main
-        class="flex-1 flex flex-col relative z-0 h-auto md:h-screen md:overflow-y-auto custom-scrollbar scroll-smooth">
-        <!-- Multi-language Toggle (Mobile Top-Left) -->
-        <div class="md:hidden absolute top-4 left-4 z-50">
-            <button onclick="toggleLanguage()"
-                class="w-12 h-12 flex items-center justify-center bg-gray-900/50 backdrop-blur-md border border-white/10 text-gray-300 rounded-full shadow-lg hover:bg-gray-800/80 transition-all font-bold font-mono text-sm">
-                <span id="langDisplayMobile">KR</span>
-            </button>
-        </div>
-
-        <!-- Mobile Header (Floating Button) -->
-        <div class="md:hidden absolute top-4 right-4 z-50">
-            <button onclick="toggleSidebar()"
-                class="p-3 bg-gray-900/50 backdrop-blur-md border border-white/10 text-gray-300 rounded-full shadow-lg hover:bg-gray-800/80 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-            </button>
-        </div>
-
-        <div
-            class="flex-1 flex flex-col items-center justify-start pt-8 sm:pt-20 pb-12 px-4 sm:px-8 max-w-7xl mx-auto w-full">
-
-            <!-- Hero Section -->
-            <div class="text-center mb-12 animate-fade-in">
-                <div
-                    class="inline-block mb-4 px-4 py-1.5 rounded-full glass text-blue-300 text-xs font-medium border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                    OPEN SOURCE INTELLIGENCE TOOL
+        <!-- Sidebar: History -->
+        <aside
+            class="fixed md:relative top-0 left-0 h-full w-[280px] md:w-80 glass border-r border-white/5 p-6 flex flex-col z-30 transition-transform transform -translate-x-full md:translate-x-0"
+            id="sidebar">
+            <div class="flex items-center gap-3 mb-8 tracking-wide">
+                <div class="bg-blue-600/20 p-2 rounded-lg shadow-lg shadow-blue-500/10 border border-blue-500/30">
+                    <img src="assets/icon-history.png" alt="History"
+                        class="h-6 w-6 object-contain filter drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]">
                 </div>
-                <h1
-                    class="text-3xl sm:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-100 via-white to-blue-200 mb-4 tracking-tighter drop-shadow-lg">
-                    Cyber OSINT Lookup
-                </h1>
-                <p class="text-gray-300 text-lg max-w-2xl mx-auto font-light drop-shadow-md">
-                    <span id="hero-span-ip" class="text-blue-400 font-medium">IP 주소</span>, <span id="hero-span-domain"
-                        class="text-purple-400 font-medium">도메인</span>, <span id="hero-text-and">그리고 잠재적</span> <span
-                        id="hero-span-threat" class="text-red-400 font-medium">위협 정보</span><span
-                        id="hero-text-analyze">를 실시간으로 분석합니다.</span>
-                </p>
+                <h2 id="history-title" class="text-xl font-bold text-white">검색 기록</h2>
             </div>
 
-            <!-- Search Bar -->
-            <div class="w-full max-w-2xl text-center relative z-20 mb-12 animate-fade-in px-4"
-                style="animation-delay: 0.1s">
-                <div class="relative group">
+            <div class="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2">
+                <ul id="historyList" class="space-y-1 text-sm text-gray-400">
+                    <!-- History items will be injected here -->
+                </ul>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-white/10">
+                <button id="clearHistoryBtn"
+                    class="w-full text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 py-2 rounded transition-colors flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span id="clear-history-text">기록 전체 삭제</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main
+            class="flex-1 flex flex-col relative z-0 h-auto md:h-screen md:overflow-y-auto custom-scrollbar scroll-smooth">
+            <!-- Multi-language Toggle (Mobile Top-Left) -->
+            <div class="md:hidden absolute top-4 left-4 z-50">
+                <button onclick="toggleLanguage()"
+                    class="w-12 h-12 flex items-center justify-center bg-gray-900/50 backdrop-blur-md border border-white/10 text-gray-300 rounded-full shadow-lg hover:bg-gray-800/80 transition-all font-bold font-mono text-sm">
+                    <span id="langDisplayMobile">KR</span>
+                </button>
+            </div>
+
+            <!-- Mobile Header (Floating Button) -->
+            <div class="md:hidden absolute top-4 right-4 z-50">
+                <button onclick="toggleSidebar()"
+                    class="p-3 bg-gray-900/50 backdrop-blur-md border border-white/10 text-gray-300 rounded-full shadow-lg hover:bg-gray-800/80 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
+
+            <div
+                class="flex-1 flex flex-col items-center justify-start pt-8 sm:pt-20 pb-12 px-4 sm:px-8 max-w-7xl mx-auto w-full">
+
+                <!-- Hero Section -->
+                <div class="text-center mb-12 animate-fade-in">
                     <div
-                        class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl blur opacity-30 group-hover:opacity-75 transition duration-500">
+                        class="inline-block mb-4 px-4 py-1.5 rounded-full glass text-blue-300 text-xs font-medium border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                        OPEN SOURCE INTELLIGENCE TOOL
                     </div>
-                    <div
-                        class="relative bg-gray-900/90 ring-1 ring-white/10 rounded-2xl flex items-center p-1.5 sm:p-2 shadow-2xl backdrop-blur-sm">
-                        <input id="input" type="text" placeholder="도메인 또는 IP 입력"
-                            class="flex-1 bg-transparent text-white px-3 py-2.5 sm:px-4 sm:py-3 text-base sm:text-lg placeholder-gray-500 focus:outline-none font-mono"
-                            autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
-                        <button id="searchBtn"
-                            class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/50 px-4 py-2.5 sm:px-8 sm:py-3 rounded-xl font-semibold transition-all shadow-[0_0_15px_rgba(59,130,246,0.2)] hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] flex items-center gap-2 transform hover:-translate-y-0.5 group">
-                            <img src="assets/icon-search.png?v=2" alt="Search"
-                                class="h-5 w-5 object-contain filter drop-shadow-md group-hover:brightness-125 transition-all">
-                            <span id="search-btn-text" class="hidden sm:inline">검색</span>
-                        </button>
+                    <h1
+                        class="text-3xl sm:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-100 via-white to-blue-200 mb-4 tracking-tighter drop-shadow-lg">
+                        Cyber OSINT Lookup
+                    </h1>
+                    <p class="text-gray-300 text-lg max-w-2xl mx-auto font-light drop-shadow-md">
+                        <span id="hero-span-ip" class="text-blue-400 font-medium">IP 주소</span>, <span
+                            id="hero-span-domain" class="text-purple-400 font-medium">도메인</span>, <span
+                            id="hero-text-and">그리고 잠재적</span> <span id="hero-span-threat"
+                            class="text-red-400 font-medium">위협 정보</span><span id="hero-text-analyze">를 실시간으로
+                            분석합니다.</span>
+                    </p>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="w-full max-w-2xl text-center relative z-20 mb-12 animate-fade-in px-4"
+                    style="animation-delay: 0.1s">
+                    <div class="relative group">
+                        <div
+                            class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl blur opacity-30 group-hover:opacity-75 transition duration-500">
+                        </div>
+                        <div
+                            class="relative bg-gray-900/90 ring-1 ring-white/10 rounded-2xl flex items-center p-1.5 sm:p-2 shadow-2xl backdrop-blur-sm">
+                            <input id="input" type="text" placeholder="도메인 또는 IP 입력"
+                                class="flex-1 bg-transparent text-white px-3 py-2.5 sm:px-4 sm:py-3 text-base sm:text-lg placeholder-gray-500 focus:outline-none font-mono"
+                                autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+                            <button id="searchBtn"
+                                class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 sm:px-8 sm:py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-blue-500/40 flex items-center gap-2 transform hover:-translate-y-0.5 group">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="h-5 w-5 group-hover:scale-110 transition-transform" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <span id="search-btn-text" class="hidden sm:inline">검색</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Results Container -->
-            <div id="result" class="w-full max-w-4xl space-y-6">
-                <!-- Initial Empty State / Promo -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center text-gray-400 text-sm mt-8 opacity-70">
+                <!-- Results Container -->
+                <div id="result" class="w-full max-w-4xl space-y-6">
+                    <!-- Initial Empty State / Promo -->
                     <div
-                        class="p-4 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm shadow-lg hover:bg-white/10 transition-colors">
-                        <div class="text-2xl mb-2">🌍</div>
-                        <div id="promo-geo">지리적 위치 & ASN</div>
-                    </div>
-                    <div
-                        class="p-4 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm shadow-lg hover:bg-white/10 transition-colors">
-                        <div class="text-2xl mb-2">🛡️</div>
-                        <div id="promo-risk">리스크 분석</div>
-                    </div>
-                    <div
-                        class="p-4 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm shadow-lg hover:bg-white/10 transition-colors">
-                        <div class="text-2xl mb-2">🔌</div>
-                        <div id="promo-port">포트 스캐닝</div>
+                        class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center text-gray-400 text-sm mt-8 opacity-70">
+                        <div
+                            class="p-4 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm shadow-lg hover:bg-white/10 transition-colors">
+                            <div class="text-2xl mb-2">🌍</div>
+                            <div id="promo-geo">지리적 위치 & ASN</div>
+                        </div>
+                        <div
+                            class="p-4 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm shadow-lg hover:bg-white/10 transition-colors">
+                            <div class="text-2xl mb-2">🛡️</div>
+                            <div id="promo-risk">리스크 분석</div>
+                        </div>
+                        <div
+                            class="p-4 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm shadow-lg hover:bg-white/10 transition-colors">
+                            <div class="text-2xl mb-2">🔌</div>
+                            <div id="promo-port">포트 스캐닝</div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Footer Removed by User Request -->
+                <footer class="mt-20 text-gray-400 text-sm font-light opacity-0"></footer>
+
             </div>
+        </main>
 
-            <!-- Footer Removed by User Request -->
-            <footer class="mt-20 text-gray-400 text-sm font-light opacity-0"></footer>
+        <!-- Embedded App Logic -->
+        <script>
+            // OpenReplay Configuration
+            const initOpts = {
+                projectKey: "Wn9H5fNTViYfuPBYa0GB",
+                defaultInputMode: 0,
+                obscureTextNumbers: false,
+                obscureTextEmails: false,
+                network: {
+                    capturePayload: true,
+                    failuresOnly: false,
+                    ignoreHeaders: false
+                }
+            };
 
-        </div>
-    </main>
+            // Translations
+            const translations = {
+                ko: {
+                    placeholder: "도메인 또는 IP 입력",
+                    search_btn: "검색",
+                    search_loading: "OSINT 데이터베이스 검색 중...",
+                    input_error: "IP 주소 또는 도메인을 입력해주세요.",
+                    dns_checking: "DNS 확인 중...",
+                    search_failed: "검색 실패",
+                    error_unknown: "알 수 없는 오류가 발생했습니다.",
+                    target: "Target",
+                    hostname: "호스트네임",
+                    ip_address: "IP 주소",
+                    open_ports: "오픈 포트",
+                    tags: "태그",
+                    vulns: "⚠️ 취약점",
+                    cpes: "CPE 목록",
+                    subdomains: "발견된 서브도메인",
+                    subdomains_error: "서브도메인을 불러올 수 없습니다.",
+                    risk_analysis: "🛡️ 리스크 분석",
+                    risk_level_low: "낮음",
+                    risk_level_medium: "중간",
+                    risk_level_high: "위험",
+                    risk_score: "위험도 점수",
+                    label_mobile: "모바일",
+                    label_vpn: "VPN",
+                    label_tor: "Tor",
+                    label_proxy: "프록시",
+                    label_datacenter: "데이터센터",
+                    net_info: "네트워크 정보",
+                    country: "국가",
+                    region: "지역",
+                    city: "도시",
+                    timezone: "타임존",
+                    ssl_cert: "📄 SSL 인증서 (최근)",
+                    ssl_cn: "공통 이름 (CN)",
+                    ssl_issuer: "발급자",
+                    ssl_date: "기록 날짜",
+                    no_cert: "인증서 정보가 없습니다.",
+                    cert_error: "인증서 정보를 불러오는데 실패했습니다.",
+                    history_title: "검색 기록",
+                    clear_history: "기록 전체 삭제",
+                    hero_span_ip: "IP 주소",
+                    hero_span_domain: "도메인",
+                    hero_text_and: ", 그리고 잠재적 ",
+                    hero_span_threat: "위협 정보",
+                    hero_text_analyze: "를 실시간으로 분석합니다.",
+                    promo_geo: "지리적 위치 & ASN",
+                    promo_risk: "리스크 분석",
+                    promo_port: "포트 스캐닝",
+                    lang_display: "KR"
+                },
+                en: {
+                    placeholder: "Enter Domain or IP",
+                    search_btn: "Search",
+                    search_loading: "Searching OSINT Database...",
+                    input_error: "Please enter an IP address or domain.",
+                    dns_checking: "Checking DNS...",
+                    search_failed: "Search Failed",
+                    error_unknown: "An unknown error occurred.",
+                    target: "Target",
+                    hostname: "Hostnames",
+                    ip_address: "IP Address",
+                    open_ports: "Open Ports",
+                    tags: "Tags",
+                    vulns: "⚠️ Vulnerabilities",
+                    cpes: "CPE List",
+                    subdomains: "Discovered Subdomains",
+                    subdomains_error: "Could not fetch subdomains.",
+                    risk_analysis: "🛡️ Risk Analysis",
+                    risk_level_low: "Low",
+                    risk_level_medium: "Medium",
+                    risk_level_high: "High",
+                    risk_score: "Risk Score",
+                    label_mobile: "Mobile",
+                    label_vpn: "VPN",
+                    label_tor: "Tor",
+                    label_proxy: "Proxy",
+                    label_datacenter: "Datacenter",
+                    net_info: "Network Info",
+                    country: "Country",
+                    region: "Region",
+                    city: "City",
+                    timezone: "Timezone",
+                    ssl_cert: "📄 SSL Certificates (Recent)",
+                    ssl_cn: "Common Name (CN)",
+                    ssl_issuer: "Issuer",
+                    ssl_date: "Date",
+                    no_cert: "No certificate information.",
+                    cert_error: "Failed to fetch certificate information.",
+                    history_title: "History",
+                    clear_history: "Clear History",
+                    hero_span_ip: "IP Address",
+                    hero_span_domain: "Domain",
+                    hero_text_and: ", and potential ",
+                    hero_span_threat: "Threats",
+                    hero_text_analyze: " analyzed in real-time.",
+                    promo_geo: "Geo Location & ASN",
+                    promo_risk: "Risk Analysis",
+                    promo_port: "Port Scanning",
+                    lang_display: "EN"
+                }
+            };
 
-    <!-- Embedded App Logic -->
-    <script>
-        // OpenReplay Configuration
-        const initOpts = {
-            projectKey: "Wn9H5fNTViYfuPBYa0GB",
-            defaultInputMode: 0,
-            obscureTextNumbers: false,
-            obscureTextEmails: false,
-            network: {
-                capturePayload: true,
-                failuresOnly: false,
-                ignoreHeaders: false
+            let currentLang = 'ko';
+
+            // Utilities
+            const $ = (selector) => document.querySelector(selector);
+            const $$ = (selector) => document.querySelectorAll(selector);
+
+            // Initialize Application
+            document.addEventListener("DOMContentLoaded", () => {
+                initAnalytics();
+                loadHistory();
+                setupEventListeners();
+                initLanguage();
+            });
+
+            function initLanguage() {
+                const savedLang = localStorage.getItem('lang');
+                if (savedLang) {
+                    currentLang = savedLang;
+                } else {
+                    const browserLang = navigator.language.startsWith('ko') ? 'ko' : 'en';
+                    currentLang = browserLang;
+                }
+                updateLanguage();
             }
-        };
 
-        // Translations
-        const translations = {
-            ko: {
-                placeholder: "도메인 또는 IP 입력",
-                search_btn: "검색",
-                search_loading: "OSINT 데이터베이스 검색 중...",
-                input_error: "IP 주소 또는 도메인을 입력해주세요.",
-                dns_checking: "DNS 확인 중...",
-                search_failed: "검색 실패",
-                error_unknown: "알 수 없는 오류가 발생했습니다.",
-                target: "Target",
-                hostname: "호스트네임",
-                ip_address: "IP 주소",
-                open_ports: "오픈 포트",
-                tags: "태그",
-                vulns: "⚠️ 취약점",
-                cpes: "CPE 목록",
-                subdomains: "발견된 서브도메인",
-                subdomains_error: "서브도메인을 불러올 수 없습니다.",
-                risk_analysis: "🛡️ 리스크 분석",
-                risk_level_low: "낮음",
-                risk_level_medium: "중간",
-                risk_level_high: "위험",
-                risk_score: "위험도 점수",
-                label_mobile: "모바일",
-                label_vpn: "VPN",
-                label_tor: "Tor",
-                label_proxy: "프록시",
-                label_datacenter: "데이터센터",
-                net_info: "네트워크 정보",
-                country: "국가",
-                region: "지역",
-                city: "도시",
-                timezone: "타임존",
-                ssl_cert: "📄 SSL 인증서 (최근)",
-                ssl_cn: "공통 이름 (CN)",
-                ssl_issuer: "발급자",
-                ssl_date: "기록 날짜",
-                no_cert: "인증서 정보가 없습니다.",
-                cert_error: "인증서 정보를 불러오는데 실패했습니다.",
-                history_title: "검색 기록",
-                clear_history: "기록 전체 삭제",
-                hero_span_ip: "IP 주소",
-                hero_span_domain: "도메인",
-                hero_text_and: ", 그리고 잠재적 ",
-                hero_span_threat: "위협 정보",
-                hero_text_analyze: "를 실시간으로 분석합니다.",
-                promo_geo: "지리적 위치 & ASN",
-                promo_risk: "리스크 분석",
-                promo_port: "포트 스캐닝",
-                lang_display: "KR"
-            },
-            en: {
-                placeholder: "Enter Domain or IP",
-                search_btn: "Search",
-                search_loading: "Searching OSINT Database...",
-                input_error: "Please enter an IP address or domain.",
-                dns_checking: "Checking DNS...",
-                search_failed: "Search Failed",
-                error_unknown: "An unknown error occurred.",
-                target: "Target",
-                hostname: "Hostnames",
-                ip_address: "IP Address",
-                open_ports: "Open Ports",
-                tags: "Tags",
-                vulns: "⚠️ Vulnerabilities",
-                cpes: "CPE List",
-                subdomains: "Discovered Subdomains",
-                subdomains_error: "Could not fetch subdomains.",
-                risk_analysis: "🛡️ Risk Analysis",
-                risk_level_low: "Low",
-                risk_level_medium: "Medium",
-                risk_level_high: "High",
-                risk_score: "Risk Score",
-                label_mobile: "Mobile",
-                label_vpn: "VPN",
-                label_tor: "Tor",
-                label_proxy: "Proxy",
-                label_datacenter: "Datacenter",
-                net_info: "Network Info",
-                country: "Country",
-                region: "Region",
-                city: "City",
-                timezone: "Timezone",
-                ssl_cert: "📄 SSL Certificates (Recent)",
-                ssl_cn: "Common Name (CN)",
-                ssl_issuer: "Issuer",
-                ssl_date: "Date",
-                no_cert: "No certificate information.",
-                cert_error: "Failed to fetch certificate information.",
-                history_title: "History",
-                clear_history: "Clear History",
-                hero_span_ip: "IP Address",
-                hero_span_domain: "Domain",
-                hero_text_and: ", and potential ",
-                hero_span_threat: "Threats",
-                hero_text_analyze: " analyzed in real-time.",
-                promo_geo: "Geo Location & ASN",
-                promo_risk: "Risk Analysis",
-                promo_port: "Port Scanning",
-                lang_display: "EN"
+            function toggleLanguage() {
+                currentLang = currentLang === 'ko' ? 'en' : 'ko';
+                localStorage.setItem('lang', currentLang);
+                updateLanguage();
             }
-        };
 
-        let currentLang = 'ko';
+            function updateLanguage() {
+                const t = translations[currentLang];
 
-        // Utilities
-        const $ = (selector) => document.querySelector(selector);
-        const $$ = (selector) => document.querySelectorAll(selector);
+                // Updates Static Text
+                const setTxt = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
 
-        // Initialize Application
-        document.addEventListener("DOMContentLoaded", () => {
-            initAnalytics();
-            loadHistory();
-            setupEventListeners();
-            initLanguage();
-        });
+                setTxt('hero-span-ip', t.hero_span_ip);
+                setTxt('hero-span-domain', t.hero_span_domain);
+                setTxt('hero-text-and', t.hero_text_and);
+                setTxt('hero-span-threat', t.hero_span_threat);
+                setTxt('hero-text-analyze', t.hero_text_analyze);
 
-        function initLanguage() {
-            const savedLang = localStorage.getItem('lang');
-            if (savedLang) {
-                currentLang = savedLang;
-            } else {
-                const browserLang = navigator.language.startsWith('ko') ? 'ko' : 'en';
-                currentLang = browserLang;
+                setTxt('search-btn-text', t.search_btn);
+                setTxt('history-title', t.history_title);
+                setTxt('clear-history-text', t.clear_history);
+
+                setTxt('promo-geo', t.promo_geo);
+                setTxt('promo-risk', t.promo_risk);
+                setTxt('promo-port', t.promo_port);
+
+                setTxt('langDisplayMobile', t.lang_display);
+
+                // Update Placeholder
+                const input = document.getElementById('input');
+                if (input) input.placeholder = t.placeholder;
+
+                // Update Page Title if needed (optional)
             }
-            updateLanguage();
-        }
 
-        function toggleLanguage() {
-            currentLang = currentLang === 'ko' ? 'en' : 'ko';
-            localStorage.setItem('lang', currentLang);
-            updateLanguage();
-        }
+            function toggleSidebar() {
+                const sidebar = document.getElementById('sidebar');
+                const backdrop = document.getElementById('sidebarBackdrop');
 
-        function updateLanguage() {
-            const t = translations[currentLang];
+                sidebar.classList.toggle('-translate-x-full');
 
-            // Updates Static Text
-            const setTxt = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
-
-            setTxt('hero-span-ip', t.hero_span_ip);
-            setTxt('hero-span-domain', t.hero_span_domain);
-            setTxt('hero-text-and', t.hero_text_and);
-            setTxt('hero-span-threat', t.hero_span_threat);
-            setTxt('hero-text-analyze', t.hero_text_analyze);
-
-            setTxt('search-btn-text', t.search_btn);
-            setTxt('history-title', t.history_title);
-            setTxt('clear-history-text', t.clear_history);
-
-            setTxt('promo-geo', t.promo_geo);
-            setTxt('promo-risk', t.promo_risk);
-            setTxt('promo-port', t.promo_port);
-
-            setTxt('langDisplayMobile', t.lang_display);
-
-            // Update Placeholder
-            const input = document.getElementById('input');
-            if (input) input.placeholder = t.placeholder;
-
-            // Update Page Title if needed (optional)
-        }
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('sidebarBackdrop');
-
-            sidebar.classList.toggle('-translate-x-full');
-
-            // Toggle backdrop
-            if (sidebar.classList.contains('-translate-x-full')) {
-                backdrop.classList.add('hidden');
-                backdrop.classList.remove('opacity-100');
-            } else {
-                backdrop.classList.remove('hidden');
-                // Small delay to allow display:block to apply before opacity transition
-                setTimeout(() => backdrop.classList.add('opacity-100'), 10);
+                // Toggle backdrop
+                if (sidebar.classList.contains('-translate-x-full')) {
+                    backdrop.classList.add('hidden');
+                    backdrop.classList.remove('opacity-100');
+                } else {
+                    backdrop.classList.remove('hidden');
+                    // Small delay to allow display:block to apply before opacity transition
+                    setTimeout(() => backdrop.classList.add('opacity-100'), 10);
+                }
             }
-        }
 
-        function setupEventListeners() {
-            const inputBtn = $('#searchBtn');
-            const inputField = $('#input');
-            const clearHistoryBtn = $('#clearHistoryBtn');
+            function setupEventListeners() {
+                const inputBtn = $('#searchBtn');
+                const inputField = $('#input');
+                const clearHistoryBtn = $('#clearHistoryBtn');
 
-            if (inputBtn) inputBtn.addEventListener('click', fetchData);
-            if (inputField) {
-                inputField.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') fetchData();
-                });
+                if (inputBtn) inputBtn.addEventListener('click', fetchData);
+                if (inputField) {
+                    inputField.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') fetchData();
+                    });
+                }
+                if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', clearHistory);
             }
-            if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', clearHistory);
-        }
 
-        // Analytics Initialization
-        async function initAnalytics() {
-            // Clarity
-            (function (c, l, a, r, i, t, y) {
-                c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) };
-                t = l.createElement(r); t.async = 1; t.src = "https://www.clarity.ms/tag/" + i;
-                y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
-            })(window, document, "clarity", "script", "sm1ajaw48y");
+            // Analytics Initialization
+            async function initAnalytics() {
+                // Clarity
+                (function (c, l, a, r, i, t, y) {
+                    c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) };
+                    t = l.createElement(r); t.async = 1; t.src = "https://www.clarity.ms/tag/" + i;
+                    y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+                })(window, document, "clarity", "script", "sm1ajaw48y");
 
-            // OpenReplay Loader
-            (function (A, s, a, y, e, r) {
-                r = window.OpenReplay = [e, r, y, [s - 1, e]];
-                s = document.createElement('script');
-                s.src = A;
-                s.async = !a;
-                document.getElementsByTagName('head')[0].appendChild(s);
+                // OpenReplay Loader
+                (function (A, s, a, y, e, r) {
+                    r = window.OpenReplay = [e, r, y, [s - 1, e]];
+                    s = document.createElement('script');
+                    s.src = A;
+                    s.async = !a;
+                    document.getElementsByTagName('head')[0].appendChild(s);
 
-                r.start = function (v) { r.push([0]) };
-                r.stop = function (v) { r.push([1]) };
-                r.setUserID = function (id) { r.push([2, id]) };
-                r.setUserAnonymousID = function (id) { r.push([3, id]) };
-                r.setMetadata = function (k, v) { r.push([4, k, v]) };
-                r.event = function (k, p, i) { r.push([5, k, p, i]) };
-                r.issue = function (k, p) { r.push([6, k, p]) };
-                r.isActive = function () { return false };
-                r.getSessionToken = function () { };
-            })("//static.openreplay.com/latest/openreplay-assist.js", 1, 0, initOpts, null);
+                    r.start = function (v) { r.push([0]) };
+                    r.stop = function (v) { r.push([1]) };
+                    r.setUserID = function (id) { r.push([2, id]) };
+                    r.setUserAnonymousID = function (id) { r.push([3, id]) };
+                    r.setMetadata = function (k, v) { r.push([4, k, v]) };
+                    r.event = function (k, p, i) { r.push([5, k, p, i]) };
+                    r.issue = function (k, p) { r.push([6, k, p]) };
+                    r.isActive = function () { return false };
+                    r.getSessionToken = function () { };
+                })("//static.openreplay.com/latest/openreplay-assist.js", 1, 0, initOpts, null);
 
-            const ip = await getUserIP();
-            if (window.OpenReplay && typeof OpenReplay.setUserID === 'function') {
-                OpenReplay.setUserID(ip);
+                const ip = await getUserIP();
+                if (window.OpenReplay && typeof OpenReplay.setUserID === 'function') {
+                    OpenReplay.setUserID(ip);
+                }
+                if (window.OpenReplay && typeof OpenReplay.start === 'function') {
+                    OpenReplay.start();
+                }
             }
-            if (window.OpenReplay && typeof OpenReplay.start === 'function') {
-                OpenReplay.start();
+
+            async function getUserIP() {
+                try {
+                    const res = await fetch("https://ipinfo.io/json");
+                    const data = await res.json();
+                    return data.ip;
+                } catch (err) {
+                    console.error("IP 확인 실패:", err);
+                    return "unknown";
+                }
             }
-        }
 
-        async function getUserIP() {
-            try {
-                const res = await fetch("https://ipinfo.io/json");
-                const data = await res.json();
-                return data.ip;
-            } catch (err) {
-                console.error("IP 확인 실패:", err);
-                return "unknown";
+            // History Management
+            function saveToHistory(query) {
+                let history = JSON.parse(localStorage.getItem('osint_history') || '[]');
+                history = history.filter(item => item !== query);
+                history.unshift(query);
+                if (history.length > 20) history.pop();
+                localStorage.setItem('osint_history', JSON.stringify(history));
+                loadHistory();
             }
-        }
 
-        // History Management
-        function saveToHistory(query) {
-            let history = JSON.parse(localStorage.getItem('osint_history') || '[]');
-            history = history.filter(item => item !== query);
-            history.unshift(query);
-            if (history.length > 20) history.pop();
-            localStorage.setItem('osint_history', JSON.stringify(history));
-            loadHistory();
-        }
+            function loadHistory() {
+                const historyList = document.getElementById('historyList');
+                if (!historyList) return;
 
-        function loadHistory() {
-            const historyList = document.getElementById('historyList');
-            if (!historyList) return;
-
-            const history = JSON.parse(localStorage.getItem('osint_history') || '[]');
-            historyList.innerHTML = history.map(item => `
+                const history = JSON.parse(localStorage.getItem('osint_history') || '[]');
+                historyList.innerHTML = history.map(item => `
                 <li class="cursor-pointer hover:text-blue-200 transition-colors py-1 px-2 rounded hover:bg-white/5 flex items-center gap-2" data-query="${item}">
                     <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     ${item}
                 </li>
             `).join('');
 
-            // Re-attach listeners to list items
-            historyList.querySelectorAll('li').forEach(li => {
-                li.addEventListener('click', () => {
-                    const query = li.getAttribute('data-query');
-                    if (query) searchFromHistory(query);
+                // Re-attach listeners to list items
+                historyList.querySelectorAll('li').forEach(li => {
+                    li.addEventListener('click', () => {
+                        const query = li.getAttribute('data-query');
+                        if (query) searchFromHistory(query);
+                    });
                 });
-            });
-        }
-
-        function clearHistory() {
-            localStorage.removeItem('osint_history');
-            loadHistory();
-        }
-
-        function searchFromHistory(query) {
-            const input = document.getElementById('input');
-            if (input) {
-                input.value = query;
-                fetchData();
             }
-        }
 
-        // Data Fetching and Logic
-        async function resolveDomain(domain) {
-            const res = await axios.get(`https://dns.google/resolve?name=${domain}&type=A`);
-            const answers = res.data.Answer || [];
-            const ipAnswer = answers.reverse().find(a => a.type === 1);
-            if (!ipAnswer) throw new Error("IP 주소를 찾을 수 없습니다.");
-            return ipAnswer.data;
-        }
-
-        async function fetchIPQueryRisk(ip) {
-            try {
-                const res = await axios.get(`https://api.ipquery.io/${ip}?format=json`);
-                return res.data.risk || null;
-            } catch (e) {
-                console.warn("IPQuery 리스크 정보 조회 실패:", e);
-                return null;
+            function clearHistory() {
+                localStorage.removeItem('osint_history');
+                loadHistory();
             }
-        }
 
-        async function fetchData() {
-            const t = translations[currentLang];
-            const inputEl = document.getElementById('input');
-            const resultEl = document.getElementById('result');
-            if (!inputEl || !resultEl) return;
-
-            let input = inputEl.value.trim();
-
-            try {
-                if (input.startsWith('http://') || input.startsWith('https://')) {
-                    const urlObj = new URL(input);
-                    input = urlObj.hostname;
+            function searchFromHistory(query) {
+                const input = document.getElementById('input');
+                if (input) {
+                    input.value = query;
+                    fetchData();
                 }
-            } catch (e) {
             }
-            resultEl.innerHTML = `
+
+            // Data Fetching and Logic
+            async function resolveDomain(domain) {
+                const res = await axios.get(`https://dns.google/resolve?name=${domain}&type=A`);
+                const answers = res.data.Answer || [];
+                const ipAnswer = answers.reverse().find(a => a.type === 1);
+                if (!ipAnswer) throw new Error("IP 주소를 찾을 수 없습니다.");
+                return ipAnswer.data;
+            }
+
+            async function fetchIPQueryRisk(ip) {
+                try {
+                    const res = await axios.get(`https://api.ipquery.io/${ip}?format=json`);
+                    return res.data.risk || null;
+                } catch (e) {
+                    console.warn("IPQuery 리스크 정보 조회 실패:", e);
+                    return null;
+                }
+            }
+
+            async function fetchData() {
+                const t = translations[currentLang];
+                const inputEl = document.getElementById('input');
+                const resultEl = document.getElementById('result');
+                if (!inputEl || !resultEl) return;
+
+                let input = inputEl.value.trim();
+
+                try {
+                    if (input.startsWith('http://') || input.startsWith('https://')) {
+                        const urlObj = new URL(input);
+                        input = urlObj.hostname;
+                    }
+                } catch (e) {
+                }
+                resultEl.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-12 text-gray-400 animate-pulse">
                     <div class="text-4xl mb-4">🔍</div>
                     <div class="text-lg">${t.search_loading}</div>
                 </div>
             `;
 
-            if (!input) {
-                resultEl.innerHTML = `
+                if (!input) {
+                    resultEl.innerHTML = `
                     <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-200 text-center">
                         ${t.input_error}
                     </div>
                 `;
-                return;
-            }
+                    return;
+                }
 
-            try {
-                saveToHistory(input);
-                let ip = input;
-                const isDomain = isNaN(Number(input.split('.')[0]));
+                try {
+                    saveToHistory(input);
+                    let ip = input;
+                    const isDomain = isNaN(Number(input.split('.')[0]));
 
-                if (isDomain) {
-                    resultEl.innerHTML = `
+                    if (isDomain) {
+                        resultEl.innerHTML = `
                         <div class="flex flex-col items-center justify-center py-12 text-gray-400 animate-pulse">
                             <div class="text-4xl mb-4">🌐</div>
                             <div class="text-lg">${input} ${t.dns_checking}</div>
                         </div>
                     `;
-                    ip = await resolveDomain(input);
-                }
+                        ip = await resolveDomain(input);
+                    }
 
-                // Parallel requests
-                const [shodanRes, ipinfoRes, ipqueryRisk] = await Promise.all([
-                    axios.get(`https://internetdb.shodan.io/${ip}`).catch(() => ({ data: {} })),
-                    axios.get(`https://ipinfo.io/${ip}/json`).catch(() => ({ data: {} })),
-                    fetchIPQueryRisk(ip)
-                ]);
+                    // Parallel requests
+                    const [shodanRes, ipinfoRes, ipqueryRisk] = await Promise.all([
+                        axios.get(`https://internetdb.shodan.io/${ip}`).catch(() => ({ data: {} })),
+                        axios.get(`https://ipinfo.io/${ip}/json`).catch(() => ({ data: {} })),
+                        fetchIPQueryRisk(ip)
+                    ]);
 
-                const data = {
-                    ...shodanRes.data,
-                    resolvedIp: ip,
-                    country: ipinfoRes.data.country || '',
-                    org: ipinfoRes.data.org || '',
-                    city: ipinfoRes.data.city || '',
-                    region: ipinfoRes.data.region || '',
-                    timezone: ipinfoRes.data.timezone || '',
-                    risk: ipqueryRisk
-                };
+                    const data = {
+                        ...shodanRes.data,
+                        resolvedIp: ip,
+                        country: ipinfoRes.data.country || '',
+                        org: ipinfoRes.data.org || '',
+                        city: ipinfoRes.data.city || '',
+                        region: ipinfoRes.data.region || '',
+                        timezone: ipinfoRes.data.timezone || '',
+                        risk: ipqueryRisk
+                    };
 
-                let subdomainsHtml = '';
-                if (isDomain) {
-                    subdomainsHtml = await fetchSubdomains(input);
-                }
+                    let subdomainsHtml = '';
+                    if (isDomain) {
+                        subdomainsHtml = await fetchSubdomains(input);
+                    }
 
-                renderResult(input, data, subdomainsHtml, isDomain);
+                    renderResult(input, data, subdomainsHtml, isDomain);
 
-                if (isDomain) {
-                    const certBox = document.createElement('div');
-                    certBox.id = 'crtsh';
-                    certBox.className = 'mt-6';
-                    certBox.innerHTML = `
+                    if (isDomain) {
+                        const certBox = document.createElement('div');
+                        certBox.id = 'crtsh';
+                        certBox.className = 'mt-6';
+                        certBox.innerHTML = `
                         <div class="animate-pulse flex space-x-4">
                             <div class="flex-1 space-y-4 py-1">
                                 <div class="h-4 bg-gray-700 rounded w-3/4"></div>
@@ -641,27 +669,27 @@
                             </div>
                         </div>
                     `;
-                    resultEl.querySelector('.result-card').appendChild(certBox);
-                    fetchCrtshData(input);
-                }
+                        resultEl.querySelector('.result-card').appendChild(certBox);
+                        fetchCrtshData(input);
+                    }
 
-            } catch (e) {
-                console.error(e);
-                resultEl.innerHTML = `
+                } catch (e) {
+                    console.error(e);
+                    resultEl.innerHTML = `
                     <div class="p-6 bg-red-900/20 border border-red-500/50 rounded-xl text-center">
                         <div class="text-red-400 text-lg font-semibold mb-2">${t.search_failed}</div>
                         <div class="text-gray-400 text-sm">${e.message || t.error_unknown}</div>
                     </div>
                 `;
+                }
             }
-        }
 
-        // Rendering Logic
-        function renderResult(input, data, subdomainsHtml, isDomain) {
-            const t = translations[currentLang];
-            const resultEl = document.getElementById('result');
+            // Rendering Logic
+            function renderResult(input, data, subdomainsHtml, isDomain) {
+                const t = translations[currentLang];
+                const resultEl = document.getElementById('result');
 
-            resultEl.innerHTML = `
+                resultEl.innerHTML = `
                 <div class="result-card bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-8 shadow-2xl animate-fade-in text-left">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 border-b border-gray-700/50 pb-6 gap-4">
                     <div class="w-full overflow-hidden">
@@ -703,36 +731,36 @@
                 ` : ''}
                 </div>
             `;
-        }
-
-        function renderRiskSection(risk) {
-            if (!risk) return '';
-            const t = translations[currentLang];
-
-            const riskScore = risk.risk_score || 0;
-            let scoreColor = 'text-green-400';
-            let barColor = 'bg-green-500';
-            let riskLevel = t.risk_level_low;
-
-            if (riskScore > 75) {
-                scoreColor = 'text-red-500';
-                barColor = 'bg-red-500';
-                riskLevel = t.risk_level_high;
-            } else if (riskScore > 40) {
-                scoreColor = 'text-orange-400';
-                barColor = 'bg-orange-500';
-                riskLevel = t.risk_level_medium;
             }
 
-            const riskItems = [
-                { key: 'is_mobile', label: t.label_mobile, value: risk.is_mobile },
-                { key: 'is_vpn', label: t.label_vpn, value: risk.is_vpn },
-                { key: 'is_tor', label: t.label_tor, value: risk.is_tor },
-                { key: 'is_proxy', label: t.label_proxy, value: risk.is_proxy },
-                { key: 'is_datacenter', label: t.label_datacenter, value: risk.is_datacenter }
-            ];
+            function renderRiskSection(risk) {
+                if (!risk) return '';
+                const t = translations[currentLang];
 
-            return `
+                const riskScore = risk.risk_score || 0;
+                let scoreColor = 'text-green-400';
+                let barColor = 'bg-green-500';
+                let riskLevel = t.risk_level_low;
+
+                if (riskScore > 75) {
+                    scoreColor = 'text-red-500';
+                    barColor = 'bg-red-500';
+                    riskLevel = t.risk_level_high;
+                } else if (riskScore > 40) {
+                    scoreColor = 'text-orange-400';
+                    barColor = 'bg-orange-500';
+                    riskLevel = t.risk_level_medium;
+                }
+
+                const riskItems = [
+                    { key: 'is_mobile', label: t.label_mobile, value: risk.is_mobile },
+                    { key: 'is_vpn', label: t.label_vpn, value: risk.is_vpn },
+                    { key: 'is_tor', label: t.label_tor, value: risk.is_tor },
+                    { key: 'is_proxy', label: t.label_proxy, value: risk.is_proxy },
+                    { key: 'is_datacenter', label: t.label_datacenter, value: risk.is_datacenter }
+                ];
+
+                return `
                 <div class="bg-white/5 rounded-xl p-5 border border-white/5">
                 <div class="flex items-center justify-between mb-4">
                     <div class="text-gray-300 font-medium flex items-center gap-2">
@@ -753,20 +781,20 @@
 
                 <div class="flex flex-wrap gap-2">
                     ${riskItems.map(item => {
-                const isActive = item.value === true;
-                const badgeClass = isActive
-                    ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                    : 'bg-gray-700/30 text-gray-500 border border-gray-600/30 line-through opacity-50';
-                return `<span class="text-xs px-2 py-1 rounded-md border ${badgeClass}">${item.label}</span>`;
-            }).join('')}
+                    const isActive = item.value === true;
+                    const badgeClass = isActive
+                        ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                        : 'bg-gray-700/30 text-gray-500 border border-gray-600/30 line-through opacity-50';
+                    return `<span class="text-xs px-2 py-1 rounded-md border ${badgeClass}">${item.label}</span>`;
+                }).join('')}
                 </div>
                 </div>
             `;
-        }
+            }
 
-        function renderSection(title, items = [], prefix = '', badgeClass = 'bg-gray-700/50 text-gray-300 border border-gray-600/30') {
-            if (!items || items.length === 0) return '';
-            return `
+            function renderSection(title, items = [], prefix = '', badgeClass = 'bg-gray-700/50 text-gray-300 border border-gray-600/30') {
+                if (!items || items.length === 0) return '';
+                return `
                 <div class="mb-2">
                 <div class="text-gray-400 text-xs uppercase tracking-wider font-semibold mb-2">${title}</div>
                 <div class="flex flex-wrap gap-2">
@@ -774,11 +802,11 @@
                 </div>
                 </div>
             `;
-        }
+            }
 
-        function renderListSection(title, items = []) {
-            if (!items || items.length === 0) return '';
-            return `
+            function renderListSection(title, items = []) {
+                if (!items || items.length === 0) return '';
+                return `
                 <div class="mb-4">
                 <div class="text-gray-400 text-xs uppercase tracking-wider font-semibold mb-2">${title}</div>
                 <div class="bg-black/20 rounded-lg p-3 max-h-40 overflow-y-auto custom-scrollbar">
@@ -788,46 +816,46 @@
                 </div>
                 </div>
             `;
-        }
+            }
 
-        function renderIpinfoSection(data) {
-            const t = translations[currentLang];
-            if (!data.country && !data.org && !data.city && !data.region && !data.timezone) return '';
+            function renderIpinfoSection(data) {
+                const t = translations[currentLang];
+                if (!data.country && !data.org && !data.city && !data.region && !data.timezone) return '';
 
-            const fields = [
-                { label: t.net_info, icon: '📍', value: null, header: true },
-                { label: t.country, value: data.country },
-                { label: t.region, value: data.region },
-                { label: t.city, value: data.city },
-                { label: t.timezone, value: data.timezone },
-                { label: 'ISP / ASN', value: data.org, mono: true }
-            ].filter(f => f.header || f.value);
+                const fields = [
+                    { label: t.net_info, icon: '📍', value: null, header: true },
+                    { label: t.country, value: data.country },
+                    { label: t.region, value: data.region },
+                    { label: t.city, value: data.city },
+                    { label: t.timezone, value: data.timezone },
+                    { label: 'ISP / ASN', value: data.org, mono: true }
+                ].filter(f => f.header || f.value);
 
-            return `
+                return `
                 <div class="bg-white/5 rounded-xl p-5 border border-white/5">
                 ${fields.map(f => {
-                if (f.header) return `<div class="text-gray-300 font-medium mb-3 flex items-center gap-2">${f.icon} ${f.label}</div>`;
-                return `
+                    if (f.header) return `<div class="text-gray-300 font-medium mb-3 flex items-center gap-2">${f.icon} ${f.label}</div>`;
+                    return `
                         <div class="flex justify-between items-start py-1 border-b border-gray-700/30 last:border-0">
                             <span class="text-xs text-gray-500">${f.label}</span>
                             <span class="text-sm text-gray-200 text-right ${f.mono ? 'font-mono text-xs' : ''}">${f.value}</span>
                         </div>
                     `;
-            }).join('')}
+                }).join('')}
                 </div>
             `;
-        }
+            }
 
-        async function fetchSubdomains(domain) {
-            const t = translations[currentLang];
-            try {
-                const res = await axios.get(`https://api.certspotter.com/v1/issuances?domain=${domain}&include_subdomains=true&expand=dns_names`);
-                const rawDnsNames = res.data.flatMap(entry => entry.dns_names);
-                const unique = [...new Set(rawDnsNames)].sort();
+            async function fetchSubdomains(domain) {
+                const t = translations[currentLang];
+                try {
+                    const res = await axios.get(`https://api.certspotter.com/v1/issuances?domain=${domain}&include_subdomains=true&expand=dns_names`);
+                    const rawDnsNames = res.data.flatMap(entry => entry.dns_names);
+                    const unique = [...new Set(rawDnsNames)].sort();
 
-                if (unique.length === 0) return '';
+                    if (unique.length === 0) return '';
 
-                return `
+                    return `
                     <div>
                     <div class="text-gray-400 text-xs uppercase tracking-wider font-semibold mb-3">${t.subdomains}</div>
                     <div class="bg-black/30 rounded-xl p-4 border border-white/5 max-h-60 overflow-y-auto custom-scrollbar">
@@ -837,24 +865,24 @@
                     </div>
                     </div>
                 `;
-            } catch {
-                return `<div class="text-red-400 text-xs mt-2">${t.subdomains_error}</div>`;
-            }
-        }
-
-        async function fetchCrtshData(domain) {
-            const t = translations[currentLang];
-            const resultBox = document.getElementById('crtsh');
-            try {
-                const res = await axios.get(`https://crt.sh/?q=${domain}&output=json`);
-                const certs = res.data.slice(0, 5);
-
-                if (!certs || certs.length === 0) {
-                    resultBox.innerHTML = `<div class="text-sm text-gray-500">${t.no_cert}</div>`;
-                    return;
+                } catch {
+                    return `<div class="text-red-400 text-xs mt-2">${t.subdomains_error}</div>`;
                 }
+            }
 
-                resultBox.innerHTML = `
+            async function fetchCrtshData(domain) {
+                const t = translations[currentLang];
+                const resultBox = document.getElementById('crtsh');
+                try {
+                    const res = await axios.get(`https://crt.sh/?q=${domain}&output=json`);
+                    const certs = res.data.slice(0, 5);
+
+                    if (!certs || certs.length === 0) {
+                        resultBox.innerHTML = `<div class="text-sm text-gray-500">${t.no_cert}</div>`;
+                        return;
+                    }
+
+                    resultBox.innerHTML = `
                     <div class="bg-white/5 rounded-xl p-5 border border-white/5">
                     <div class="text-gray-300 font-medium mb-4 flex items-center gap-2">${t.ssl_cert}</div>
                     <div class="space-y-3">
@@ -877,12 +905,12 @@
                     </div>
                     </div>
                 `;
-            } catch (e) {
-                console.error(e);
-                resultBox.innerHTML = `<div class="text-red-400 text-xs">${t.cert_error}</div>`;
+                } catch (e) {
+                    console.error(e);
+                    resultBox.innerHTML = `<div class="text-red-400 text-xs">${t.cert_error}</div>`;
+                }
             }
-        }
-    </script>
-</body>
+        </script>
+    </body>
 
 </html>
