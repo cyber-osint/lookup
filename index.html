@@ -386,7 +386,17 @@
             const resultEl = document.getElementById('result');
             if (!inputEl || !resultEl) return;
 
-            const input = inputEl.value.trim();
+            let input = inputEl.value.trim();
+
+            // 입력값이 URL 형태인 경우 호스트네임만 추출 (예: https://naver.com -> naver.com)
+            try {
+                if (input.startsWith('http://') || input.startsWith('https://')) {
+                    const urlObj = new URL(input);
+                    input = urlObj.hostname;
+                }
+            } catch (e) {
+                // 파싱 실패 시 원본 입력값 사용
+            }
             resultEl.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-12 text-gray-400 animate-pulse">
                     <div class="text-4xl mb-4">🔍</div>
