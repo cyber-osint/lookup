@@ -144,9 +144,15 @@
     <main
         class="flex-1 flex flex-col relative z-0 h-auto md:h-screen md:overflow-y-auto custom-scrollbar scroll-smooth">
         <!-- Mobile Header -->
-        <div class="md:hidden flex items-center justify-between p-4 glass sticky top-0 z-50">
+        <div
+            class="md:hidden flex items-center justify-between p-4 glass sticky top-0 z-50 backdrop-blur-xl border-b border-white/5">
             <div class="font-bold flex items-center gap-2 text-white">
-                <span class="text-xl">🕵️‍♂️</span> Cyber OSINT
+                <div
+                    class="h-8 w-8 bg-gradient-to-tr from-blue-600 to-cyan-400 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <span class="text-lg">👁️</span>
+                </div>
+                <span
+                    class="text-lg tracking-tight font-mono text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">OSINT.LOOKUP</span>
             </div>
             <!-- Mobile Menu Toggle -->
             <button onclick="toggleSidebar()" class="p-2 text-gray-400">
