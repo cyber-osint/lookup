@@ -119,7 +119,7 @@
                 <img src="assets/icon-history.png" alt="History"
                     class="h-6 w-6 object-contain filter drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]">
             </div>
-            <h2 class="text-xl font-bold text-white">검색 기록</h2>
+            <h2 id="history-title" class="text-xl font-bold text-white">검색 기록</h2>
         </div>
 
         <div class="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2">
@@ -136,7 +136,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                기록 전체 삭제
+                <span id="clear-history-text">기록 전체 삭제</span>
             </button>
         </div>
     </aside>
@@ -144,6 +144,14 @@
     <!-- Main Content -->
     <main
         class="flex-1 flex flex-col relative z-0 h-auto md:h-screen md:overflow-y-auto custom-scrollbar scroll-smooth">
+        <!-- Multi-language Toggle (Mobile Top-Left) -->
+        <div class="md:hidden absolute top-4 left-4 z-50">
+            <button onclick="toggleLanguage()"
+                class="p-2 bg-gray-900/50 backdrop-blur-md border border-white/10 text-gray-300 rounded-lg shadow-lg hover:bg-gray-800/80 transition-all text-xs font-mono">
+                <span id="langDisplayMobile">KR</span>
+            </button>
+        </div>
+
         <!-- Mobile Header (Floating Button) -->
         <div class="md:hidden absolute top-4 right-4 z-50">
             <button onclick="toggleSidebar()"
@@ -169,9 +177,10 @@
                     Cyber OSINT Lookup
                 </h1>
                 <p class="text-gray-300 text-lg max-w-2xl mx-auto font-light drop-shadow-md">
-                    <span class="text-blue-400 font-medium">IP 주소</span>, <span
-                        class="text-purple-400 font-medium">도메인</span>, 그리고 잠재적 <span
-                        class="text-red-400 font-medium">위협 정보</span>를 실시간으로 분석합니다.
+                    <span id="hero-span-ip" class="text-blue-400 font-medium">IP 주소</span>, <span id="hero-span-domain"
+                        class="text-purple-400 font-medium">도메인</span>, <span id="hero-text-and">그리고 잠재적</span> <span
+                        id="hero-span-threat" class="text-red-400 font-medium">위협 정보</span><span
+                        id="hero-text-analyze">를 실시간으로 분석합니다.</span>
                 </p>
             </div>
 
@@ -191,7 +200,7 @@
                             class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 sm:px-8 sm:py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-blue-500/40 flex items-center gap-2 transform hover:-translate-y-0.5 group">
                             <img src="assets/icon-search.png" alt="Search"
                                 class="h-5 w-5 object-contain filter drop-shadow-md group-hover:brightness-125 transition-all">
-                            <span class="hidden sm:inline">검색</span>
+                            <span id="search-btn-text" class="hidden sm:inline">검색</span>
                         </button>
                     </div>
                 </div>
@@ -204,17 +213,17 @@
                     <div
                         class="p-4 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm shadow-lg hover:bg-white/10 transition-colors">
                         <div class="text-2xl mb-2">🌍</div>
-                        <div>지리적 위치 & ASN</div>
+                        <div id="promo-geo">지리적 위치 & ASN</div>
                     </div>
                     <div
                         class="p-4 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm shadow-lg hover:bg-white/10 transition-colors">
                         <div class="text-2xl mb-2">🛡️</div>
-                        <div>리스크 분석</div>
+                        <div id="promo-risk">리스크 분석</div>
                     </div>
                     <div
                         class="p-4 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm shadow-lg hover:bg-white/10 transition-colors">
                         <div class="text-2xl mb-2">🔌</div>
-                        <div>포트 스캐닝</div>
+                        <div id="promo-port">포트 스캐닝</div>
                     </div>
                 </div>
             </div>
@@ -240,6 +249,112 @@
             }
         };
 
+        // Translations
+        const translations = {
+            ko: {
+                placeholder: "도메인 또는 IP 입력",
+                search_btn: "검색",
+                search_loading: "OSINT 데이터베이스 검색 중...",
+                input_error: "IP 주소 또는 도메인을 입력해주세요.",
+                dns_checking: "DNS 확인 중...",
+                search_failed: "검색 실패",
+                error_unknown: "알 수 없는 오류가 발생했습니다.",
+                target: "Target",
+                hostname: "호스트네임",
+                ip_address: "IP 주소",
+                open_ports: "오픈 포트",
+                tags: "태그",
+                vulns: "⚠️ 취약점",
+                cpes: "CPE 목록",
+                subdomains: "발견된 서브도메인",
+                subdomains_error: "서브도메인을 불러올 수 없습니다.",
+                risk_analysis: "🛡️ 리스크 분석",
+                risk_level_low: "낮음",
+                risk_level_medium: "중간",
+                risk_level_high: "위험",
+                risk_score: "위험도 점수",
+                label_mobile: "모바일",
+                label_vpn: "VPN",
+                label_tor: "Tor",
+                label_proxy: "프록시",
+                label_datacenter: "데이터센터",
+                net_info: "네트워크 정보",
+                country: "국가",
+                region: "지역",
+                city: "도시",
+                timezone: "타임존",
+                ssl_cert: "📄 SSL 인증서 (최근)",
+                ssl_cn: "공통 이름 (CN)",
+                ssl_issuer: "발급자",
+                ssl_date: "기록 날짜",
+                no_cert: "인증서 정보가 없습니다.",
+                cert_error: "인증서 정보를 불러오는데 실패했습니다.",
+                history_title: "검색 기록",
+                clear_history: "기록 전체 삭제",
+                hero_span_ip: "IP 주소",
+                hero_span_domain: "도메인",
+                hero_text_and: ", 그리고 잠재적 ",
+                hero_span_threat: "위협 정보",
+                hero_text_analyze: "를 실시간으로 분석합니다.",
+                promo_geo: "지리적 위치 & ASN",
+                promo_risk: "리스크 분석",
+                promo_port: "포트 스캐닝",
+                lang_display: "KR"
+            },
+            en: {
+                placeholder: "Enter Domain or IP",
+                search_btn: "Search",
+                search_loading: "Searching OSINT Database...",
+                input_error: "Please enter an IP address or domain.",
+                dns_checking: "Checking DNS...",
+                search_failed: "Search Failed",
+                error_unknown: "An unknown error occurred.",
+                target: "Target",
+                hostname: "Hostnames",
+                ip_address: "IP Address",
+                open_ports: "Open Ports",
+                tags: "Tags",
+                vulns: "⚠️ Vulnerabilities",
+                cpes: "CPE List",
+                subdomains: "Discovered Subdomains",
+                subdomains_error: "Could not fetch subdomains.",
+                risk_analysis: "🛡️ Risk Analysis",
+                risk_level_low: "Low",
+                risk_level_medium: "Medium",
+                risk_level_high: "High",
+                risk_score: "Risk Score",
+                label_mobile: "Mobile",
+                label_vpn: "VPN",
+                label_tor: "Tor",
+                label_proxy: "Proxy",
+                label_datacenter: "Datacenter",
+                net_info: "Network Info",
+                country: "Country",
+                region: "Region",
+                city: "City",
+                timezone: "Timezone",
+                ssl_cert: "📄 SSL Certificates (Recent)",
+                ssl_cn: "Common Name (CN)",
+                ssl_issuer: "Issuer",
+                ssl_date: "Date",
+                no_cert: "No certificate information.",
+                cert_error: "Failed to fetch certificate information.",
+                history_title: "History",
+                clear_history: "Clear History",
+                hero_span_ip: "IP Address",
+                hero_span_domain: "Domain",
+                hero_text_and: ", and potential ",
+                hero_span_threat: "Threats",
+                hero_text_analyze: " analyzed in real-time.",
+                promo_geo: "Geo Location & ASN",
+                promo_risk: "Risk Analysis",
+                promo_port: "Port Scanning",
+                lang_display: "EN"
+            }
+        };
+
+        let currentLang = 'ko';
+
         // Utilities
         const $ = (selector) => document.querySelector(selector);
         const $$ = (selector) => document.querySelectorAll(selector);
@@ -249,7 +364,54 @@
             initAnalytics();
             loadHistory();
             setupEventListeners();
+            initLanguage();
         });
+
+        function initLanguage() {
+            const savedLang = localStorage.getItem('lang');
+            if (savedLang) {
+                currentLang = savedLang;
+            } else {
+                const browserLang = navigator.language.startsWith('ko') ? 'ko' : 'en';
+                currentLang = browserLang;
+            }
+            updateLanguage();
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'ko' ? 'en' : 'ko';
+            localStorage.setItem('lang', currentLang);
+            updateLanguage();
+        }
+
+        function updateLanguage() {
+            const t = translations[currentLang];
+
+            // Updates Static Text
+            const setTxt = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+
+            setTxt('hero-span-ip', t.hero_span_ip);
+            setTxt('hero-span-domain', t.hero_span_domain);
+            setTxt('hero-text-and', t.hero_text_and);
+            setTxt('hero-span-threat', t.hero_span_threat);
+            setTxt('hero-text-analyze', t.hero_text_analyze);
+
+            setTxt('search-btn-text', t.search_btn);
+            setTxt('history-title', t.history_title);
+            setTxt('clear-history-text', t.clear_history);
+
+            setTxt('promo-geo', t.promo_geo);
+            setTxt('promo-risk', t.promo_risk);
+            setTxt('promo-port', t.promo_port);
+
+            setTxt('langDisplayMobile', t.lang_display);
+
+            // Update Placeholder
+            const input = document.getElementById('input');
+            if (input) input.placeholder = t.placeholder;
+
+            // Update Page Title if needed (optional)
+        }
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -394,32 +556,31 @@
         }
 
         async function fetchData() {
+            const t = translations[currentLang];
             const inputEl = document.getElementById('input');
             const resultEl = document.getElementById('result');
             if (!inputEl || !resultEl) return;
 
             let input = inputEl.value.trim();
 
-            // 입력값이 URL 형태인 경우 호스트네임만 추출 (예: https://naver.com -> naver.com)
             try {
                 if (input.startsWith('http://') || input.startsWith('https://')) {
                     const urlObj = new URL(input);
                     input = urlObj.hostname;
                 }
             } catch (e) {
-                // 파싱 실패 시 원본 입력값 사용
             }
             resultEl.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-12 text-gray-400 animate-pulse">
                     <div class="text-4xl mb-4">🔍</div>
-                    <div class="text-lg">OSINT 데이터베이스 검색 중...</div>
+                    <div class="text-lg">${t.search_loading}</div>
                 </div>
             `;
 
             if (!input) {
                 resultEl.innerHTML = `
                     <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-200 text-center">
-                        IP 주소 또는 도메인을 입력해주세요.
+                        ${t.input_error}
                     </div>
                 `;
                 return;
@@ -434,7 +595,7 @@
                     resultEl.innerHTML = `
                         <div class="flex flex-col items-center justify-center py-12 text-gray-400 animate-pulse">
                             <div class="text-4xl mb-4">🌐</div>
-                            <div class="text-lg">${input} DNS 확인 중...</div>
+                            <div class="text-lg">${input} ${t.dns_checking}</div>
                         </div>
                     `;
                     ip = await resolveDomain(input);
@@ -488,8 +649,8 @@
                 console.error(e);
                 resultEl.innerHTML = `
                     <div class="p-6 bg-red-900/20 border border-red-500/50 rounded-xl text-center">
-                        <div class="text-red-400 text-lg font-semibold mb-2">검색 실패</div>
-                        <div class="text-gray-400 text-sm">${e.message || "알 수 없는 오류가 발생했습니다."}</div>
+                        <div class="text-red-400 text-lg font-semibold mb-2">${t.search_failed}</div>
+                        <div class="text-gray-400 text-sm">${e.message || t.error_unknown}</div>
                     </div>
                 `;
             }
@@ -497,13 +658,14 @@
 
         // Rendering Logic
         function renderResult(input, data, subdomainsHtml, isDomain) {
+            const t = translations[currentLang];
             const resultEl = document.getElementById('result');
 
             resultEl.innerHTML = `
                 <div class="result-card bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-8 shadow-2xl animate-fade-in text-left">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 border-b border-gray-700/50 pb-6 gap-4">
                     <div class="w-full overflow-hidden">
-                        <div class="text-sm text-blue-400 font-medium tracking-wider uppercase mb-1">Target</div>
+                        <div class="text-sm text-blue-400 font-medium tracking-wider uppercase mb-1">${t.target}</div>
                         <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight break-all">${input}</h2>
                     </div>
                     ${isDomain ? `<div class="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-mono border border-blue-500/30 whitespace-nowrap self-start sm:self-auto">DOMAIN</div>` : `<div class="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-xs font-mono border border-green-500/30 whitespace-nowrap self-start sm:self-auto">IP ADDR</div>`}
@@ -511,26 +673,26 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div class="space-y-6">
-                        ${renderSection('호스트네임', data.hostnames)}
-                        ${renderSection('IP 주소', [data.resolvedIp], '🌐')}
+                        ${renderSection(t.hostname, data.hostnames)}
+                        ${renderSection(t.ip_address, [data.resolvedIp], '🌐')}
                         ${renderIpinfoSection(data)}
                     </div>
                     <div class="space-y-6">
                         ${renderRiskSection(data.risk)}
-                        ${renderSection('오픈 포트', data.ports, '🔌', 'bg-blue-500/10 text-blue-300 border border-blue-500/20')}
-                        ${renderSection('태그', data.tags, '#', 'bg-purple-500/10 text-purple-300 border border-purple-500/20')}
+                        ${renderSection(t.open_ports, data.ports, '🔌', 'bg-blue-500/10 text-blue-300 border border-blue-500/20')}
+                        ${renderSection(t.tags, data.tags, '#', 'bg-purple-500/10 text-purple-300 border border-purple-500/20')}
                     </div>
                 </div>
 
                 ${data.vulns && data.vulns.length > 0 ? `
                     <div class="mt-8 pt-6 border-t border-gray-700/50">
-                        ${renderSection('⚠️ 취약점', data.vulns, '', 'bg-red-500/10 text-red-300 border border-red-500/20')}
+                        ${renderSection(t.vulns, data.vulns, '', 'bg-red-500/10 text-red-300 border border-red-500/20')}
                     </div>
                 ` : ''}
 
                 ${data.cpes && data.cpes.length > 0 ? `
                     <div class="mt-6">
-                        ${renderListSection('CPE 목록', data.cpes)}
+                        ${renderListSection(t.cpes, data.cpes)}
                     </div>
                 ` : ''}
 
@@ -545,42 +707,43 @@
 
         function renderRiskSection(risk) {
             if (!risk) return '';
+            const t = translations[currentLang];
 
             const riskScore = risk.risk_score || 0;
             let scoreColor = 'text-green-400';
             let barColor = 'bg-green-500';
-            let riskLevel = '낮음';
+            let riskLevel = t.risk_level_low;
 
             if (riskScore > 75) {
                 scoreColor = 'text-red-500';
                 barColor = 'bg-red-500';
-                riskLevel = '위험';
+                riskLevel = t.risk_level_high;
             } else if (riskScore > 40) {
                 scoreColor = 'text-orange-400';
                 barColor = 'bg-orange-500';
-                riskLevel = '중간';
+                riskLevel = t.risk_level_medium;
             }
 
             const riskItems = [
-                { key: 'is_mobile', label: '모바일', value: risk.is_mobile },
-                { key: 'is_vpn', label: 'VPN', value: risk.is_vpn },
-                { key: 'is_tor', label: 'Tor', value: risk.is_tor },
-                { key: 'is_proxy', label: '프록시', value: risk.is_proxy },
-                { key: 'is_datacenter', label: '데이터센터', value: risk.is_datacenter }
+                { key: 'is_mobile', label: t.label_mobile, value: risk.is_mobile },
+                { key: 'is_vpn', label: t.label_vpn, value: risk.is_vpn },
+                { key: 'is_tor', label: t.label_tor, value: risk.is_tor },
+                { key: 'is_proxy', label: t.label_proxy, value: risk.is_proxy },
+                { key: 'is_datacenter', label: t.label_datacenter, value: risk.is_datacenter }
             ];
 
             return `
                 <div class="bg-white/5 rounded-xl p-5 border border-white/5">
                 <div class="flex items-center justify-between mb-4">
                     <div class="text-gray-300 font-medium flex items-center gap-2">
-                        🛡️ 리스크 분석
+                        ${t.risk_analysis}
                     </div>
                     <div class="${scoreColor} font-bold text-sm bg-white/5 px-2 py-1 rounded">${riskLevel}</div>
                 </div>
                 
                 <div class="mb-4">
                     <div class="flex justify-between text-xs mb-1 text-gray-400">
-                        <span>위험도 점수</span>
+                        <span>${t.risk_score}</span>
                         <span class="${scoreColor} font-mono">${riskScore}/100</span>
                     </div>
                     <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
@@ -628,14 +791,15 @@
         }
 
         function renderIpinfoSection(data) {
+            const t = translations[currentLang];
             if (!data.country && !data.org && !data.city && !data.region && !data.timezone) return '';
 
             const fields = [
-                { label: '네트워크 정보', icon: '📍', value: null, header: true },
-                { label: '국가', value: data.country },
-                { label: '지역', value: data.region },
-                { label: '도시', value: data.city },
-                { label: '타임존', value: data.timezone },
+                { label: t.net_info, icon: '📍', value: null, header: true },
+                { label: t.country, value: data.country },
+                { label: t.region, value: data.region },
+                { label: t.city, value: data.city },
+                { label: t.timezone, value: data.timezone },
                 { label: 'ISP / ASN', value: data.org, mono: true }
             ].filter(f => f.header || f.value);
 
@@ -655,6 +819,7 @@
         }
 
         async function fetchSubdomains(domain) {
+            const t = translations[currentLang];
             try {
                 const res = await axios.get(`https://api.certspotter.com/v1/issuances?domain=${domain}&include_subdomains=true&expand=dns_names`);
                 const rawDnsNames = res.data.flatMap(entry => entry.dns_names);
@@ -664,7 +829,7 @@
 
                 return `
                     <div>
-                    <div class="text-gray-400 text-xs uppercase tracking-wider font-semibold mb-3">발견된 서브도메인</div>
+                    <div class="text-gray-400 text-xs uppercase tracking-wider font-semibold mb-3">${t.subdomains}</div>
                     <div class="bg-black/30 rounded-xl p-4 border border-white/5 max-h-60 overflow-y-auto custom-scrollbar">
                         <div class="flex flex-wrap gap-2">
                             ${unique.map(d => `<span class="text-xs text-blue-300 bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20">${d}</span>`).join('')}
@@ -673,37 +838,38 @@
                     </div>
                 `;
             } catch {
-                return `<div class="text-red-400 text-xs mt-2">서브도메인을 불러올 수 없습니다.</div>`;
+                return `<div class="text-red-400 text-xs mt-2">${t.subdomains_error}</div>`;
             }
         }
 
         async function fetchCrtshData(domain) {
+            const t = translations[currentLang];
             const resultBox = document.getElementById('crtsh');
             try {
                 const res = await axios.get(`https://crt.sh/?q=${domain}&output=json`);
                 const certs = res.data.slice(0, 5);
 
                 if (!certs || certs.length === 0) {
-                    resultBox.innerHTML = '<div class="text-sm text-gray-500">인증서 정보가 없습니다.</div>';
+                    resultBox.innerHTML = `<div class="text-sm text-gray-500">${t.no_cert}</div>`;
                     return;
                 }
 
                 resultBox.innerHTML = `
                     <div class="bg-white/5 rounded-xl p-5 border border-white/5">
-                    <div class="text-gray-300 font-medium mb-4 flex items-center gap-2">📄 SSL 인증서 (최근)</div>
+                    <div class="text-gray-300 font-medium mb-4 flex items-center gap-2">${t.ssl_cert}</div>
                     <div class="space-y-3">
                         ${certs.map(cert => `
                         <div class="p-3 bg-black/20 rounded-lg border border-white/5 text-xs space-y-1.5 hover:bg-black/30 transition-colors">
                             <div class="flex justify-between">
-                                <span class="text-gray-500">공통 이름 (CN)</span>
+                                <span class="text-gray-500">${t.ssl_cn}</span>
                                 <span class="text-blue-300 font-mono">${cert.common_name}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-500">발급자</span>
+                                <span class="text-gray-500">${t.ssl_issuer}</span>
                                 <span class="text-gray-400 truncate max-w-[200px]">${cert.issuer_name}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-500">기록 날짜</span>
+                                <span class="text-gray-500">${t.ssl_date}</span>
                                 <span class="text-gray-400">${cert.entry_timestamp ? cert.entry_timestamp.split('T')[0] : 'N/A'}</span>
                             </div>
                         </div>
@@ -713,7 +879,7 @@
                 `;
             } catch (e) {
                 console.error(e);
-                resultBox.innerHTML = `<div class="text-red-400 text-xs">인증서 정보를 불러오는데 실패했습니다.</div>`;
+                resultBox.innerHTML = `<div class="text-red-400 text-xs">${t.cert_error}</div>`;
             }
         }
     </script>
