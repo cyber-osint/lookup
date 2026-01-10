@@ -341,7 +341,8 @@
                 promo_geo: "지리적 위치 & ASN",
                 promo_risk: "리스크 분석",
                 promo_port: "포트 스캐닝",
-                lang_display: "KR"
+                lang_display: "KR",
+                host_search: "호스트 검색 결과 (HackerTarget)"
             },
             en: {
                 placeholder: "Enter Domain or IP",
@@ -391,7 +392,8 @@
                 promo_geo: "Geo Location & ASN",
                 promo_risk: "Risk Analysis",
                 promo_port: "Port Scanning",
-                lang_display: "EN"
+                lang_display: "EN",
+                host_search: "Host Search Results (HackerTarget)"
             }
         };
 
@@ -587,6 +589,26 @@
             return ipAnswer.data;
         }
 
+        async function fetchHackerTargetHosts(domain) {
+            try {
+                const res = await axios.get(`https://api.hackertarget.com/hostsearch/?q=${domain}`);
+                const text = res.data;
+                if (!text || text.includes('error')) return [];
+
+                // Parse CSV: hostname,ip
+                return text.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line && line.includes(','))
+                    .map(line => {
+                        const [host, ip] = line.split(',');
+                        return { host, ip };
+                    });
+            } catch (e) {
+                console.warn("HackerTarget API 조회 실패:", e);
+                return [];
+            }
+        }
+
         async function fetchIPQueryRisk(ip) {
             try {
                 const res = await axios.get(`https://api.ipquery.io/${ip}?format=json`);
@@ -644,10 +666,11 @@
                 }
 
                 // Parallel requests
-                const [shodanRes, ipinfoRes, ipqueryRisk] = await Promise.all([
+                const [shodanRes, ipinfoRes, ipqueryRisk, hackerTargetRes] = await Promise.all([
                     axios.get(`https://internetdb.shodan.io/${ip}`).catch(() => ({ data: {} })),
                     axios.get(`https://ipinfo.io/${ip}/json`).catch(() => ({ data: {} })),
-                    fetchIPQueryRisk(ip)
+                    fetchIPQueryRisk(ip),
+                    isDomain ? fetchHackerTargetHosts(input) : Promise.resolve([])
                 ]);
 
                 const data = {
@@ -658,7 +681,8 @@
                     city: ipinfoRes.data.city || '',
                     region: ipinfoRes.data.region || '',
                     timezone: ipinfoRes.data.timezone || '',
-                    risk: ipqueryRisk
+                    risk: ipqueryRisk,
+                    hackerTargetHosts: isDomain ? hackerTargetRes : []
                 };
 
                 let subdomainsHtml = '';
@@ -741,6 +765,20 @@
                 ${subdomainsHtml ? `
                     <div class="mt-8 pt-6 border-t border-gray-700/50">
                         ${subdomainsHtml}
+                    </div>
+                ` : ''}
+
+                ${data.hackerTargetHosts && data.hackerTargetHosts.length > 0 ? `
+                    <div class="mt-8 pt-6 border-t border-gray-700/50">
+                        <div class="mb-4 text-gray-400 text-xs uppercase tracking-wider font-semibold">${t.host_search}</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar bg-black/20 p-2 rounded-lg">
+                            ${data.hackerTargetHosts.map(item => `
+                                <div class="flex justify-between items-center bg-gray-800/40 px-3 py-2 rounded border border-white/5 hover:bg-gray-700/50 transition-colors">
+                                    <span class="text-blue-300 font-mono text-xs truncate max-w-[60%]" title="${item.host}">${item.host}</span>
+                                    <span class="text-gray-400 font-mono text-xs">${item.ip}</span>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 ` : ''}
                 </div>
