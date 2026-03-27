@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>대화면 WebRTC 원격 제어</title>
+    <title>대화면 WebRTC 원격 제어 (외부망 지원)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f4f9; padding: 20px; margin: 0; }
@@ -15,7 +15,7 @@
         .status { margin-top: 10px; font-size: 14px; font-weight: bold; color: #28a745; }
         
         /* 비디오 영역 스타일 */
-        .video-container { margin-top: 20px; text-align: center; position: relative; width: 100%; background: #111; border-radius: 8px; padding-bottom: 20px; }
+        .video-container { margin-top: 20px; text-align: center; position: relative; width: 100%; background: #111; border-radius: 8px; padding-bottom: 20px; display: none; }
         video { width: 100%; max-height: 75vh; background: #000; cursor: crosshair; display: block; margin: 0 auto; object-fit: contain; }
         .fullscreen-btn { margin-top: 15px; background: #28a745; font-size: 16px; padding: 12px 24px; }
         .fullscreen-btn:hover { background: #218838; }
@@ -27,7 +27,7 @@
 <body>
 
     <div style="padding: 0 20px;">
-        <h2>⚡ WebRTC 화면 제어 (대화면 모드)</h2>
+        <h2>⚡ WebRTC 화면 제어 (대화면 & 외부망 지원)</h2>
     </div>
     
     <div class="controls-wrapper">
@@ -47,7 +47,7 @@
         </div>
     </div>
 
-    <div class="video-container" id="videoContainer" style="display: none;">
+    <div class="video-container" id="videoContainer">
         <video id="remoteVideo" autoplay playsinline></video>
         <button class="fullscreen-btn" onclick="toggleFullscreen()">🔲 전체화면으로 크게 보기</button>
     </div>
@@ -58,10 +58,22 @@
     let peer;
     let dataConn;
 
+    // 🌟 핵심: 외부 네트워크(NAT/방화벽) 통과를 위한 퍼블릭 STUN 서버 설정
+    const peerConfig = {
+        config: {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun.cloudflare.com:3478' }
+            ]
+        }
+    };
+
     // --- Host 로직 ---
     function startHost() {
         const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
-        peer = new Peer(randomId);
+        // 설정이 적용된 Peer 객체 생성
+        peer = new Peer(randomId, peerConfig);
 
         peer.on('open', id => {
             document.getElementById('hostIdDisplay').innerText = id;
@@ -72,10 +84,12 @@
             dataConn = conn;
             document.getElementById('hostStatus').innerText = '게스트 접속 완료! 공유할 화면을 선택하세요.';
             
+            // 게스트의 클릭 데이터 수신
             conn.on('data', data => {
                 if(data.type === 'click') showPointer(data.x, data.y);
             });
 
+            // 화면 캡처 및 전송
             navigator.mediaDevices.getDisplayMedia({ video: true }).then(stream => {
                 document.getElementById('hostStatus').innerText = '✅ 화면 공유 중입니다.';
                 peer.call(conn.peer, stream);
@@ -87,12 +101,14 @@
 
     // --- Guest 로직 ---
     function connectGuest() {
-        peer = new Peer();
+        // 설정이 적용된 Peer 객체 생성
+        peer = new Peer(undefined, peerConfig);
         const hostId = document.getElementById('targetIdInput').value.toUpperCase();
         if(!hostId || hostId.length < 4) return alert('4자리 코드를 정확히 입력하세요.');
 
         peer.on('open', () => {
             document.getElementById('guestStatus').innerText = '호스트에 연결 중...';
+            // 데이터 채널(제어용) 연결
             dataConn = peer.connect(hostId);
             
             dataConn.on('open', () => {
@@ -100,22 +116,23 @@
             });
         });
 
+        // 영상 스트림 수신 대기
         peer.on('call', call => {
             call.answer(); 
             
             call.on('stream', remoteStream => {
                 document.getElementById('guestStatus').innerText = '✅ 화면 수신 완료!';
                 
-                // 비디오 컨테이너를 보이게 하고 스트림 연결
+                // 비디오 컨테이너 표시 및 스트림 연결
                 const videoContainer = document.getElementById('videoContainer');
                 const videoEl = document.getElementById('remoteVideo');
                 videoContainer.style.display = 'block';
                 videoEl.srcObject = remoteStream;
 
-                // 스크롤을 비디오 영역으로 부드럽게 이동
+                // 스크롤 이동
                 videoContainer.scrollIntoView({ behavior: 'smooth' });
 
-                // 클릭 좌표 계산 및 전송
+                // 화면 클릭 시 좌표(비율) 전송
                 videoEl.addEventListener('click', (e) => {
                     if (dataConn && dataConn.open) {
                         const rect = videoEl.getBoundingClientRect();
@@ -145,9 +162,9 @@
         if (!document.fullscreenElement) {
             if (videoEl.requestFullscreen) {
                 videoEl.requestFullscreen();
-            } else if (videoEl.webkitRequestFullscreen) { /* Safari */
+            } else if (videoEl.webkitRequestFullscreen) {
                 videoEl.webkitRequestFullscreen();
-            } else if (videoEl.msRequestFullscreen) { /* IE11 */
+            } else if (videoEl.msRequestFullscreen) {
                 videoEl.msRequestFullscreen();
             }
         } else {
