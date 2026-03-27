@@ -2,26 +2,35 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>새 창으로 열리는 WebRTC 원격 제어</title>
+    <title>대화면 WebRTC 원격 제어</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f4f9; padding: 20px; }
-        .container { display: flex; gap: 20px; flex-wrap: wrap; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f4f9; padding: 20px; margin: 0; }
+        .controls-wrapper { max-width: 1200px; margin: 0 auto; display: flex; gap: 20px; flex-wrap: wrap; }
         .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); flex: 1; min-width: 300px; }
-        button { padding: 10px 15px; background: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button { padding: 10px 15px; background: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
         button:hover { background: #004494; }
         input { padding: 9px; font-size: 16px; width: 150px; text-transform: uppercase; text-align: center; font-weight: bold; }
         .id-display { font-size: 24px; font-weight: bold; color: #d9534f; margin: 10px 0; letter-spacing: 2px; }
         .status { margin-top: 10px; font-size: 14px; font-weight: bold; color: #28a745; }
+        
+        /* 비디오 영역 스타일 */
+        .video-container { margin-top: 20px; text-align: center; position: relative; width: 100%; background: #111; border-radius: 8px; padding-bottom: 20px; }
+        video { width: 100%; max-height: 75vh; background: #000; cursor: crosshair; display: block; margin: 0 auto; object-fit: contain; }
+        .fullscreen-btn { margin-top: 15px; background: #28a745; font-size: 16px; padding: 12px 24px; }
+        .fullscreen-btn:hover { background: #218838; }
+
         /* 호스트 화면의 클릭 포인트 */
         #pointer { position: fixed; width: 20px; height: 20px; background: rgba(255, 0, 0, 0.8); border-radius: 50%; pointer-events: none; display: none; z-index: 9999; transform: translate(-50%, -50%); transition: top 0.05s, left 0.05s; box-shadow: 0 0 8px rgba(255,0,0,0.8); }
     </style>
 </head>
 <body>
 
-    <h2>⚡ 1초 연결 & 새 창 원격 제어</h2>
+    <div style="padding: 0 20px;">
+        <h2>⚡ WebRTC 화면 제어 (대화면 모드)</h2>
+    </div>
     
-    <div class="container">
+    <div class="controls-wrapper">
         <div class="box">
             <h3>💻 화면 공유자 (Host)</h3>
             <button onclick="startHost()">1. 내 방 만들기</button>
@@ -35,10 +44,12 @@
             <input type="text" id="targetIdInput" placeholder="4자리 코드 입력" maxlength="4">
             <button onclick="connectGuest()">2. 화면 접속하기</button>
             <div id="guestStatus" class="status"></div>
-            <p style="font-size: 12px; color: #666; margin-top: 10px;">
-                ⚠️ <b>주의:</b> 브라우저의 '팝업 차단'이 켜져 있다면 해제해 주셔야 새 창이 열립니다.
-            </p>
         </div>
+    </div>
+
+    <div class="video-container" id="videoContainer" style="display: none;">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <button class="fullscreen-btn" onclick="toggleFullscreen()">🔲 전체화면으로 크게 보기</button>
     </div>
 
     <div id="pointer"></div>
@@ -47,7 +58,7 @@
     let peer;
     let dataConn;
 
-    // --- Host 로직 (변경 없음) ---
+    // --- Host 로직 ---
     function startHost() {
         const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
         peer = new Peer(randomId);
@@ -74,7 +85,7 @@
         });
     }
 
-    // --- Guest 로직 (새 창 띄우기 적용) ---
+    // --- Guest 로직 ---
     function connectGuest() {
         peer = new Peer();
         const hostId = document.getElementById('targetIdInput').value.toUpperCase();
@@ -92,42 +103,19 @@
         peer.on('call', call => {
             call.answer(); 
             
-            // 호스트의 화면(스트림)이 도착하면 실행됨
             call.on('stream', remoteStream => {
-                document.getElementById('guestStatus').innerText = '✅ 화면 수신 완료! 새 창에서 확인하세요.';
+                document.getElementById('guestStatus').innerText = '✅ 화면 수신 완료!';
                 
-                // 1. 새 창(팝업) 열기 (가로 1280, 세로 720 사이즈)
-                const popup = window.open('', 'RemoteScreen', 'width=1280,height=720,scrollbars=no,resizable=yes');
-                
-                // 팝업이 차단되었을 경우 경고
-                if (!popup) {
-                    alert("팝업이 차단되었습니다! 브라우저 주소창 우측에서 팝업 차단을 해제하고 다시 시도해주세요.");
-                    return;
-                }
-
-                // 2. 새 창 안에 들어갈 HTML 태그와 스타일 강제 주입
-                popup.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>원격 화면 제어 (전체화면)</title>
-                        <style>
-                            /* 여백을 없애고 화면에 꽉 차도록 설정 */
-                            body { margin: 0; background: #111; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
-                            video { width: 100vw; height: 100vh; object-fit: fill; cursor: crosshair; }
-                        </style>
-                    </head>
-                    <body>
-                        <video id="fullscreenVideo" autoplay playsinline></video>
-                    </body>
-                    </html>
-                `);
-                
-                // 3. 새 창의 <video> 태그에 스트림 연결
-                const videoEl = popup.document.getElementById('fullscreenVideo');
+                // 비디오 컨테이너를 보이게 하고 스트림 연결
+                const videoContainer = document.getElementById('videoContainer');
+                const videoEl = document.getElementById('remoteVideo');
+                videoContainer.style.display = 'block';
                 videoEl.srcObject = remoteStream;
 
-                // 4. 새 창에서 클릭 이벤트가 발생하면 부모 창의 dataConn을 이용해 호스트로 전송
+                // 스크롤을 비디오 영역으로 부드럽게 이동
+                videoContainer.scrollIntoView({ behavior: 'smooth' });
+
+                // 클릭 좌표 계산 및 전송
                 videoEl.addEventListener('click', (e) => {
                     if (dataConn && dataConn.open) {
                         const rect = videoEl.getBoundingClientRect();
@@ -149,6 +137,24 @@
         pointer.style.left = (window.innerWidth * xPercent) + 'px';
         pointer.style.top = (window.innerHeight * yPercent) + 'px';
         setTimeout(() => pointer.style.display = 'none', 500);
+    }
+
+    // --- 전체화면 토글 기능 ---
+    function toggleFullscreen() {
+        const videoEl = document.getElementById('remoteVideo');
+        if (!document.fullscreenElement) {
+            if (videoEl.requestFullscreen) {
+                videoEl.requestFullscreen();
+            } else if (videoEl.webkitRequestFullscreen) { /* Safari */
+                videoEl.webkitRequestFullscreen();
+            } else if (videoEl.msRequestFullscreen) { /* IE11 */
+                videoEl.msRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
     }
 </script>
 </body>
