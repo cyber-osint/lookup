@@ -275,7 +275,6 @@
         /* 수신 측: 상대방이 먼저 connect() 해온 경우 */
         peer.on('connection', (incoming) => {
             if (conn && conn.open) {
-                // 이미 연결 중 → 새 연결 즉시 닫기
                 incoming.close();
                 addSystem("다른 연결 요청이 있었지만 이미 연결 중입니다.");
                 return;
@@ -283,9 +282,17 @@
             conn = incoming;
             lastPeerId = conn.peer;
             connHandlersBound = false;
-            addSystem(`${conn.peer}이(가) 연결을 요청했습니다.`);
-            // 수신 측은 이미 open 상태이므로 open 이벤트 없이 바로 바인딩
-            bindConnHandlers(false);
+
+            // open 여부에 따라 분기: 이미 열려있으면 즉시, 아니면 open 이벤트 대기
+            if (conn.open) {
+                addSystem(`${conn.peer}과(와) 연결되었습니다.`);
+                bindConnHandlers(false);
+            } else {
+                conn.on('open', () => {
+                    addSystem(`${conn.peer}과(와) 연결되었습니다.`);
+                    bindConnHandlers(false);
+                });
+            }
         });
 
         peer.on('error', (err) => {
