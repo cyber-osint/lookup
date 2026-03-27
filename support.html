@@ -2,32 +2,33 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>대화면3 WebRTC 원격 제어 (TURN 서버 적용)</title>
+    <title>대화면 WebRTC (오류 디버깅 모드)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f4f9; padding: 20px; margin: 0; }
         .controls-wrapper { max-width: 1200px; margin: 0 auto; display: flex; gap: 20px; flex-wrap: wrap; }
         .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); flex: 1; min-width: 300px; }
-        button { padding: 10px 15px; background: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        button { padding: 10px 15px; background: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         button:hover { background: #004494; }
         input { padding: 9px; font-size: 16px; width: 150px; text-transform: uppercase; text-align: center; font-weight: bold; }
         .id-display { font-size: 24px; font-weight: bold; color: #d9534f; margin: 10px 0; letter-spacing: 2px; }
         .status { margin-top: 10px; font-size: 14px; font-weight: bold; color: #28a745; }
         
-        /* 비디오 영역 스타일 */
         .video-container { margin-top: 20px; text-align: center; position: relative; width: 100%; background: #111; border-radius: 8px; padding-bottom: 20px; display: none; }
+        /* 🌟 브라우저 정책 우회를 위해 컨트롤 바 임시 추가 */
         video { width: 100%; max-height: 75vh; background: #000; cursor: crosshair; display: block; margin: 0 auto; object-fit: contain; }
-        .fullscreen-btn { margin-top: 15px; background: #28a745; font-size: 16px; padding: 12px 24px; }
-        .fullscreen-btn:hover { background: #218838; }
-
-        /* 호스트 화면의 클릭 포인트 */
-        #pointer { position: fixed; width: 20px; height: 20px; background: rgba(255, 0, 0, 0.8); border-radius: 50%; pointer-events: none; display: none; z-index: 9999; transform: translate(-50%, -50%); transition: top 0.05s, left 0.05s; box-shadow: 0 0 8px rgba(255,0,0,0.8); }
+        .fullscreen-btn { margin-top: 15px; background: #28a745; font-size: 16px; padding: 12px 24px; color: white; border: none; cursor: pointer; border-radius: 4px;}
+        
+        #pointer { position: fixed; width: 20px; height: 20px; background: rgba(255, 0, 0, 0.8); border-radius: 50%; pointer-events: none; display: none; z-index: 9999; transform: translate(-50%, -50%); transition: top 0.05s, left 0.05s; }
+        
+        /* 디버그 로그 창 */
+        #debugLog { margin-top: 20px; padding: 10px; background: #333; color: #0f0; font-family: monospace; font-size: 12px; border-radius: 5px; max-height: 150px; overflow-y: auto; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
     <div style="padding: 0 20px;">
-        <h2>⚡ WebRTC 화면 제어 (강력한 방화벽 우회 모드)</h2>
+        <h2>⚡ WebRTC 화면 제어 (디버깅 모드)</h2>
     </div>
     
     <div class="controls-wrapper">
@@ -35,7 +36,6 @@
             <h3>💻 화면 공유자 (Host)</h3>
             <button onclick="startHost()">1. 내 방 만들기</button>
             <div id="hostIdDisplay" class="id-display">----</div>
-            <p>위 4자리 코드를 상대방에게 알려주세요.</p>
             <div id="hostStatus" class="status"></div>
         </div>
 
@@ -48,8 +48,13 @@
     </div>
 
     <div class="video-container" id="videoContainer">
-        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="remoteVideo" autoplay playsinline muted controls></video>
+        <br>
         <button class="fullscreen-btn" onclick="toggleFullscreen()">🔲 전체화면으로 크게 보기</button>
+    </div>
+
+    <div style="padding: 0 20px;">
+        <div id="debugLog">시스템 대기 중...</div>
     </div>
 
     <div id="pointer"></div>
@@ -58,98 +63,105 @@
     let peer;
     let dataConn;
 
-    // 🌟 최후의 보루: 방화벽 우회를 위한 STUN + TURN 서버 모두 적용
+    // 디버그 로그 출력 함수
+    function log(msg) {
+        const logBox = document.getElementById('debugLog');
+        logBox.innerText += '\n' + msg;
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
     const peerConfig = {
         config: {
             iceServers: [
-                // 1. 일반망에서 P2P 직결을 시도하는 STUN
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun.cloudflare.com:3478' },
-                
-                // 2. 방화벽에 막혔을 때 데이터를 중계해주는 TURN (무료 공용 서버)
-                {
-                    urls: 'turn:openrelay.metered.ca:80',
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
-                },
-                {
-                    urls: 'turn:openrelay.metered.ca:443',
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
-                },
-                {
-                    urls: 'turn:openrelay.metered.ca:443?transport=tcp', // TCP 우회 강제
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
-                }
+                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
             ]
         }
     };
 
-    // --- Host 로직 ---
     function startHost() {
         const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
-        // 설정이 적용된 Peer 객체 생성
         peer = new Peer(randomId, peerConfig);
 
         peer.on('open', id => {
             document.getElementById('hostIdDisplay').innerText = id;
-            document.getElementById('hostStatus').innerText = '상대방의 접속을 기다리는 중...';
+            document.getElementById('hostStatus').innerText = '대기 중...';
+            log('[Host] 방 생성 완료: ' + id);
         });
 
         peer.on('connection', conn => {
             dataConn = conn;
-            document.getElementById('hostStatus').innerText = '게스트 접속 완료! 공유할 화면을 선택하세요.';
+            document.getElementById('hostStatus').innerText = '게스트 접속! 화면을 선택하세요.';
+            log('[Host] 게스트 제어 채널 연결됨');
             
-            // 게스트의 클릭 데이터 수신
             conn.on('data', data => {
                 if(data.type === 'click') showPointer(data.x, data.y);
             });
 
-            // 화면 캡처 및 전송
             navigator.mediaDevices.getDisplayMedia({ video: true }).then(stream => {
-                document.getElementById('hostStatus').innerText = '✅ 화면 공유 중입니다.';
-                peer.call(conn.peer, stream);
+                document.getElementById('hostStatus').innerText = '✅ 화면 공유 중';
+                log('[Host] 화면 캡처 성공, 스트림 전송 시작');
+                
+                const call = peer.call(conn.peer, stream);
+                
+                // Host 측 네트워크 연결 상태 모니터링
+                call.peerConnection.oniceconnectionstatechange = () => {
+                    log('[Host Network] ICE State: ' + call.peerConnection.iceConnectionState);
+                };
             }).catch(err => {
-                document.getElementById('hostStatus').innerText = '❌ 화면 공유가 취소되었습니다.';
+                log('[Host] 화면 캡처 실패: ' + err);
             });
         });
     }
 
-    // --- Guest 로직 ---
     function connectGuest() {
-        // 설정이 적용된 Peer 객체 생성
         peer = new Peer(undefined, peerConfig);
         const hostId = document.getElementById('targetIdInput').value.toUpperCase();
-        if(!hostId || hostId.length < 4) return alert('4자리 코드를 정확히 입력하세요.');
-
+        
         peer.on('open', () => {
-            document.getElementById('guestStatus').innerText = '호스트에 연결 중...';
-            // 데이터 채널(제어용) 연결
+            log('[Guest] 서버 접속 완료, 호스트 연결 시도...');
             dataConn = peer.connect(hostId);
             
             dataConn.on('open', () => {
-                document.getElementById('guestStatus').innerText = '연결 성공! 호스트의 화면 승인을 기다립니다...';
+                document.getElementById('guestStatus').innerText = '화면 승인 대기 중...';
+                log('[Guest] 호스트 제어 채널 연결 완료');
             });
         });
 
-        // 영상 스트림 수신 대기
         peer.on('call', call => {
+            log('[Guest] 호스트로부터 영상 전화 수신됨');
             call.answer(); 
+            
+            // Guest 측 네트워크 연결 상태 모니터링
+            call.peerConnection.oniceconnectionstatechange = () => {
+                const state = call.peerConnection.iceConnectionState;
+                log('[Guest Network] ICE State: ' + state);
+                
+                if(state === 'failed' || state === 'disconnected') {
+                    log('🚨 방화벽/TURN 서버 문제로 영상 데이터가 차단되었습니다.');
+                }
+            };
             
             call.on('stream', remoteStream => {
                 document.getElementById('guestStatus').innerText = '✅ 화면 수신 완료!';
+                log('[Guest] 영상 스트림 데이터 수신 시작');
                 
-                // 비디오 컨테이너 표시 및 스트림 연결
                 const videoContainer = document.getElementById('videoContainer');
                 const videoEl = document.getElementById('remoteVideo');
                 videoContainer.style.display = 'block';
+                
                 videoEl.srcObject = remoteStream;
+                
+                // 강제 재생 시도
+                videoEl.play().then(() => {
+                    log('[Guest] 비디오 재생 성공');
+                }).catch(err => {
+                    log('[Guest] 비디오 자동재생 차단됨: ' + err);
+                });
 
-                // 스크롤 이동
                 videoContainer.scrollIntoView({ behavior: 'smooth' });
 
-                // 화면 클릭 시 좌표(비율) 전송
                 videoEl.addEventListener('click', (e) => {
                     if (dataConn && dataConn.open) {
                         const rect = videoEl.getBoundingClientRect();
@@ -164,7 +176,6 @@
         });
     }
 
-    // --- 호스트 화면 마우스 포인터 표시 ---
     function showPointer(xPercent, yPercent) {
         const pointer = document.getElementById('pointer');
         pointer.style.display = 'block';
@@ -173,21 +184,12 @@
         setTimeout(() => pointer.style.display = 'none', 500);
     }
 
-    // --- 전체화면 토글 기능 ---
     function toggleFullscreen() {
         const videoEl = document.getElementById('remoteVideo');
         if (!document.fullscreenElement) {
-            if (videoEl.requestFullscreen) {
-                videoEl.requestFullscreen();
-            } else if (videoEl.webkitRequestFullscreen) {
-                videoEl.webkitRequestFullscreen();
-            } else if (videoEl.msRequestFullscreen) {
-                videoEl.msRequestFullscreen();
-            }
+            videoEl.requestFullscreen?.() || videoEl.webkitRequestFullscreen?.() || videoEl.msRequestFullscreen?.();
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
+            document.exitFullscreen?.();
         }
     }
 </script>
