@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>P2P 파일 셰어링</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 500px; margin: 50px auto; line-height: 1.6; }
+        .box { border: 1px solid #ccc; padding: 20px; border-radius: 8px; background: #f9f9f9; }
+        .status { font-weight: bold; color: #007bff; }
+        input, button { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
+        #log { font-size: 0.8em; color: #666; height: 100px; overflow-y: auto; border: 1px solid #eee; padding: 5px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>📂 P2P 파일 전송</h2>
+    <p>내 ID: <span id="my-id" class="status">연결 중...</span></p>
+    
+    <hr>
+    
+    <input type="text" id="receiver-id" placeholder="상대방 ID 입력">
+    <button onclick="connectToPeer()">상대방과 연결하기</button>
+    
+    <hr>
+    
+    <input type="file" id="file-input" disabled>
+    <button id="send-btn" onclick="sendFile()" disabled>파일 보내기</button>
+    
+    <div id="status-msg"></div>
+    <div id="log"></div>
+</div>
+
+<script>
+    let peer = new Peer(); // PeerJS 객체 생성 (자동으로 ID 할당)
+    let conn;
+
+    // 1. 내 ID 생성 완료 시
+    peer.on('open', (id) => {
+        document.getElementById('my-id').innerText = id;
+        log("내 ID가 생성되었습니다: " + id);
+    });
+
+    // 2. 누군가 나에게 연결을 시도할 때
+    peer.on('connection', (connection) => {
+        conn = connection;
+        setupConnection();
+        log("상대방이 연결되었습니다.");
+    });
+
+    // 3. 내가 상대방에게 연결 시도
+    function connectToPeer() {
+        const targetId = document.getElementById('receiver-id').value;
+        if (!targetId) return alert("상대 ID를 입력하세요.");
+        
+        conn = peer.connect(targetId);
+        setupConnection();
+        log(targetId + "에게 연결 시도 중...");
+    }
+
+    // 4. 연결된 후 이벤트 처리 (데이터 수신 등)
+    function setupConnection() {
+        conn.on('open', () => {
+            log("연결이 성공했습니다! 이제 파일을 보낼 수 있습니다.");
+            document.getElementById('file-input').disabled = false;
+            document.getElementById('send-btn').disabled = false;
+        });
+
+        conn.on('data', (data) => {
+            // 파일 수신 로직
+            if (data.file) {
+                const blob = new Blob([data.file], { type: data.type });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = data.fileName;
+                a.innerHTML = `⬇️ ${data.fileName} 다운로드`;
+                a.style.display = 'block';
+                document.getElementById('status-msg').appendChild(a);
+                log("파일을 받았습니다: " + data.fileName);
+            }
+        });
+    }
+
+    // 5. 파일 전송 함수
+    function sendFile() {
+        const fileInput = document.getElementById('file-input');
+        const file = fileInput.files[0];
+
+        if (!file) return alert("파일을 선택하세요.");
+        if (!conn || !conn.open) return alert("연결이 되어있지 않습니다.");
+
+        log("파일 전송 중: " + file.name);
+        
+        // PeerJS를 통해 데이터 객체 전송
+        conn.send({
+            file: file,
+            fileName: file.name,
+            type: file.type
+        });
+        
+        log("전송 완료!");
+    }
+
+    function log(msg) {
+        const logDiv = document.getElementById('log');
+        logDiv.innerHTML += `> ${msg}<br>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+</script>
+
+</body>
+</html>
