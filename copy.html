@@ -3,95 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Quick Text Share</title>
-    <script src="https://unpkg.com/trystero@0.19.0/dist/trystero-torrent.min.js"></script>
+    <title>P2P Quick Share</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; line-height: 1.6; }
-        .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:disabled { background-color: #ccc; }
-        .status { font-size: 0.9em; color: #666; margin-top: 10px; }
-        #receivedBox { background: #f9f9f9; padding: 10px; border-left: 4px solid #007bff; display: none; margin-top: 20px; }
+        body { font-family: 'Pretendard', sans-serif; max-width: 450px; margin: 40px auto; padding: 20px; background-color: #f4f7f9; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #333; font-size: 1.2rem; }
+        input, textarea { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        button { width: 100%; padding: 12px; background-color: #4A90E2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background-color: #357ABD; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; background: #eee; margin-bottom: 15px; }
+        #receivedBox { background: #eef2ff; padding: 15px; border-left: 4px solid #4A90E2; display: none; margin-top: 20px; border-radius: 0 8px 8px 0; }
+        .info-text { font-size: 0.85rem; color: #666; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>P2P 텍스트 전달</h2>
+    <h2>P2P 텍스트 공유</h2>
+    <div id="status" class="status-badge">상태: 대기 중</div>
     
-    <label>4자리 연결 코드</label>
-    <input type="text" id="roomCode" placeholder="예: 1234" maxlength="4">
-    <button id="connectBtn">연결하기</button>
+    <p class="info-text">보내는 사람과 받는 사람 모두 <b>같은 4자리 숫자</b>를 입력하세요.</p>
+    <input type="text" id="roomCode" placeholder="숫자 4자리 (예: 7788)" maxlength="4">
+    <button id="connectBtn">연결 및 대기하기</button>
     
-    <div id="status" class="status">코드를 입력하고 연결하세요.</div>
-
-    <hr>
-
-    <div id="chatSection" style="display:none;">
-        <label>보낼 텍스트</label>
-        <textarea id="sendText" placeholder="상대방에게 보낼 내용을 입력하세요"></textarea>
+    <div id="transferSection" style="display:none; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+        <textarea id="msgInput" placeholder="보낼 내용을 입력하세요"></textarea>
         <button id="sendBtn">텍스트 전송</button>
     </div>
 
     <div id="receivedBox">
-        <strong>받은 텍스트:</strong>
-        <p id="receivedText"></p>
-        <button onclick="copyText()">복사하기</button>
+        <strong style="font-size: 0.9rem;">수신된 내용:</strong>
+        <p id="receivedText" style="word-break: break-all; margin: 10px 0;"></p>
+        <button onclick="copyText()" style="padding: 5px; background: #666; font-size: 0.8rem;">내용 복사</button>
     </div>
 </div>
 
 <script>
-    let config = {appId: 'my-p2p-text-app'};
-    let room, sendData, getData;
+    let peer = null;
+    let conn = null;
 
     const connectBtn = document.getElementById('connectBtn');
     const roomInput = document.getElementById('roomCode');
-    const statusDiv = document.getElementById('status');
-    const chatSection = document.getElementById('chatSection');
+    const statusBadge = document.getElementById('status');
+    const transferSection = document.getElementById('transferSection');
     const receivedBox = document.getElementById('receivedBox');
 
-    // 연결 버튼 클릭 시
+    // 연결 시도
     connectBtn.onclick = () => {
         const code = roomInput.value.trim();
-        if (code.length < 4) return alert('4자리 코드를 입력하세요.');
+        if (code.length < 4) return alert('4자리 숫자를 입력해주세요.');
 
-        statusDiv.innerText = "연결 시도 중 (트래커 접속)...";
+        // Peer ID를 'p2p-share-' + 4자리 숫자로 설정 (중복 방지용 접두사)
+        const myId = 'p2p-share-' + code;
+        
+        // Peer 객체 생성
+        peer = new Peer(myId);
+
+        statusBadge.innerText = "상태: 연결 준비 중...";
         connectBtn.disabled = true;
 
-        // Trystero 비트토렌트 전략 사용 (서버리스)
-        room = joinRoom(config, code);
+        peer.on('open', (id) => {
+            statusBadge.innerText = "상태: 수신 대기 중 (코드: " + code + ")";
+            statusBadge.style.background = "#d1fae5";
+            statusBadge.style.color = "#065f46";
+            
+            // 누군가 나에게 연결을 시도할 때 (받는 쪽 로직)
+            peer.on('connection', (c) => {
+                conn = c;
+                setupChat();
+            });
 
-        // 데이터 송수신 정의
-        [sendData, getData] = room.makeAction('textShare');
-
-        // 피어 연결 시
-        room.onPeerJoin(peerId => {
-            statusDiv.innerText = "상대방과 연결되었습니다!";
-            statusDiv.style.color = "blue";
-            chatSection.style.display = "block";
+            // 내가 먼저 연결 시도 (보내는 쪽 로직 - 상대가 이미 대기 중일 때)
+            // PeerJS는 동일 ID가 있으면 에러가 나므로, 실제로는 '먼저 들어온 사람'이 서버 역할을 합니다.
         });
 
-        // 데이터 수신 시
-        getData((data, peerId) => {
-            receivedBox.style.display = "block";
-            document.getElementById('receivedText').innerText = data;
+        peer.on('error', (err) => {
+            if (err.type === 'unavailable-id') {
+                // 이미 해당 코드로 대기 중인 사람이 있다면, 그 사람에게 연결을 시도합니다.
+                conn = peer.connect(myId);
+                setupChat();
+            } else {
+                console.error(err);
+                alert("연결 오류가 발생했습니다.");
+                location.reload();
+            }
         });
     };
 
-    // 전송 버튼 클릭 시
+    function setupChat() {
+        statusBadge.innerText = "상태: 연결됨!";
+        statusBadge.style.background = "#dbeafe";
+        statusBadge.style.color = "#1e40af";
+        transferSection.style.display = "block";
+
+        conn.on('data', (data) => {
+            receivedBox.style.display = "block";
+            document.getElementById('receivedText').innerText = data;
+        });
+
+        conn.on('open', () => {
+            // 연결이 완전히 열리면 전송 가능
+        });
+    }
+
+    // 전송 버튼
     document.getElementById('sendBtn').onclick = () => {
-        const text = document.getElementById('sendText').value;
-        if (!text) return alert('텍스트를 입력하세요.');
+        const msg = document.getElementById('msgInput').value;
+        if (!msg || !conn) return alert('내용이 없거나 연결되지 않았습니다.');
         
-        sendData(text);
-        alert('전송 완료!');
+        conn.send(msg);
+        alert('성공적으로 보냈습니다!');
     };
 
     function copyText() {
         const text = document.getElementById('receivedText').innerText;
-        navigator.clipboard.writeText(text);
-        alert('복사되었습니다.');
+        navigator.clipboard.writeText(text).then(() => alert('복사되었습니다.'));
     }
 </script>
 
