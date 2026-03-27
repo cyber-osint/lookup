@@ -2,98 +2,125 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Simple-Peer P2P 파일 전송</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple-Peer P2P</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
-        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
-        .box { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        #status { font-weight: bold; color: blue; }
+        :root { --primary: #6366f1; --bg: #f8fafc; }
+        body { font-family: sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 350px; text-align: center; }
+        .code-display { font-size: 2rem; font-weight: bold; color: var(--primary); letter-spacing: 3px; margin: 20px 0; padding: 10px; background: #eef2ff; border-radius: 12px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; text-align: center; text-transform: uppercase; font-weight: bold; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: var(--primary); color: white; cursor: pointer; font-weight: bold; }
+        #status { margin-top: 15px; font-size: 0.85rem; color: #64748b; }
+        #transfer-ui { display: none; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+        .download-btn { display: block; margin-top: 10px; padding: 10px; background: #22c55e; color: white; text-decoration: none; border-radius: 8px; }
     </style>
 </head>
 <body>
 
-    <h2>Simple-Peer 파일 전송 데모</h2>
-    <div id="status">상태: 연결 대기 중...</div>
+<div class="card">
+    <h3>🔗 Simple-Peer 전송</h3>
+    <div id="my-code" class="code-display">----</div>
+    
+    <input type="text" id="target-code" placeholder="상대방 4자리 코드" maxlength="4" oninput="this.value = this.value.toUpperCase()">
+    <button id="connect-btn" onclick="startCheck()">연결하기</button>
 
-    <div class="box">
-        <h3>1. 연결 설정 (시그널링)</h3>
-        <p>A(발신자)는 'Init' 버튼을 누르고 생성된 코드를 B에게 보내세요.</p>
-        <button id="init">발신자(Initiator)로 시작</button>
-        <textarea id="mySignal" placeholder="나의 시그널 데이터가 여기에 표시됩니다." readonly></textarea>
-        
-        <p>상대방의 시그널 데이터를 아래에 붙여넣고 '연결'을 누르세요.</p>
-        <textarea id="otherSignal" placeholder="상대방의 시그널 데이터를 붙여넣으세요."></textarea>
-        <button id="connect">상대방과 연결</button>
+    <div id="status">시그널링 서버 연결 중...</div>
+
+    <div id="transfer-ui">
+        <input type="file" id="file-input">
+        <button onclick="sendFile()" style="background: #1e293b; margin-top: 10px;">파일 보내기</button>
     </div>
+</div>
 
-    <div class="box">
-        <h3>2. 파일 전송</h3>
-        <input type="file" id="fileInput" disabled>
-        <p id="downloadLink"></p>
-    </div>
+<script>
+    // 1. 초기 설정 (4자리 코드 및 시그널링 서버)
+    const myCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+    document.getElementById('my-code').innerText = myCode;
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
+    // 공용 테스트 시그널링 서버 (피어 연결을 도와주는 중계기)
+    const socket = io('https://p2p-signaling-server.onrender.com'); 
+    let peer = null;
 
-    <script>
-        const status = document.getElementById('status');
-        const mySignal = document.getElementById('mySignal');
-        const otherSignal = document.getElementById('otherSignal');
-        const fileInput = document.getElementById('fileInput');
-        const downloadLink = document.getElementById('downloadLink');
+    socket.on('connect', () => {
+        document.getElementById('status').innerText = "준비 완료. 상대방을 기다리세요.";
+        socket.emit('join-room', myCode);
+    });
 
-        let peer = null;
+    // 2. 연결 시작 버튼 클릭 시 (Caller)
+    function startCheck() {
+        const targetCode = document.getElementById('target-code').value;
+        if (!targetCode) return;
+        initPeer(true, targetCode);
+    }
 
-        // Peer 초기화 함수
-        function initPeer(initiator) {
-            peer = new SimplePeer({
-                initiator: initiator,
-                trickle: false // 간단한 테스트를 위해 ICE Candidate를 하나로 합침
+    // 3. Peer 초기화 함수
+    function initPeer(initiator, targetCode) {
+        peer = new SimplePeer({
+            initiator: initiator,
+            trickle: true,
+            config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
+        });
+
+        // 상대방에게 보낼 신호 데이터(Signal)가 생성되면 실행
+        peer.on('signal', data => {
+            socket.emit('signal', {
+                target: targetCode,
+                sender: myCode,
+                signal: data
             });
+        });
 
-            // 시그널 데이터가 생성되었을 때
-            peer.on('signal', data => {
-                mySignal.value = JSON.stringify(data);
-            });
+        // 데이터 채널이 열렸을 때
+        peer.on('connect', () => {
+            document.getElementById('status').innerText = "✅ P2P 연결 성공!";
+            document.getElementById('transfer-ui').style.display = 'block';
+            document.getElementById('connect-btn').disabled = true;
+        });
 
-            // 연결이 완료되었을 때
-            peer.on('connect', () => {
-                status.innerText = '상태: 연결됨! 파일을 보낼 수 있습니다.';
-                fileInput.disabled = false;
-            });
+        // 데이터를 받았을 때 (파일 수신)
+        peer.on('data', data => {
+            const parsed = JSON.parse(data);
+            const blob = new Blob([new Uint8Array(parsed.file)], { type: parsed.type });
+            const url = URL.createObjectURL(blob);
+            document.getElementById('status').innerHTML = 
+                `<a href="${url}" download="${parsed.name}" class="download-btn">⬇️ ${parsed.name} 받기</a>`;
+        });
 
-            // 데이터를 받았을 때 (파일 수신)
-            let receivedChunks = [];
-            peer.on('data', data => {
-                // simple-peer는 데이터를 Buffer/Uint8Array로 전달함
-                receivedChunks.push(data);
-                
-                // 여기서는 간단하게 파일 전송 완료를 감지하는 로직이 필요하지만
-                // 데모를 위해 버튼 등으로 처리하거나 고정된 크기를 기다릴 수 있습니다.
-                // 이 예제는 단일 청크 전송을 가정하거나 간단한 Blob 변환을 보여줍니다.
-                const blob = new Blob(receivedChunks);
-                const url = URL.createObjectURL(blob);
-                downloadLink.innerHTML = `<a href="${url}" download="received_file">파일 다운로드 받기</a>`;
-            });
+        peer.on('error', err => console.error('Peer error:', err));
+    }
+
+    // 4. 시그널링 서버로부터 신호 수신
+    socket.on('signal', data => {
+        if (!peer) {
+            // 연결 요청을 받은 쪽(Receiver)은 initiator를 false로 초기화
+            initPeer(false, data.sender);
         }
+        peer.signal(data.signal);
+    });
 
-        // 버튼 이벤트
-        document.getElementById('init').onclick = () => initPeer(true);
-        document.getElementById('connect').onclick = () => {
-            const data = JSON.parse(otherSignal.value);
-            if (!peer) initPeer(false);
-            peer.signal(data);
-        };
+    // 5. 파일 전송 함수
+    async function sendFile() {
+        const file = document.getElementById('file-input').files[0];
+        if (!file) return;
 
-        // 파일 전송 이벤트
-        fileInput.onchange = (e) => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = () => {
-                peer.send(reader.result); // 파일 데이터를 바이너리로 전송
-                status.innerText = '상태: 파일 전송 완료!';
+        document.getElementById('status').innerText = "파일 읽는 중...";
+        
+        const reader = new FileReader();
+        reader.onload = () => {
+            const payload = {
+                name: file.name,
+                type: file.type,
+                file: Array.from(new Uint8Array(reader.result))
             };
-            reader.readAsArrayBuffer(file);
+            peer.send(JSON.stringify(payload));
+            document.getElementById('status').innerText = "전송 완료!";
         };
-    </script>
+        reader.readAsArrayBuffer(file);
+    }
+</script>
+
 </body>
 </html>
