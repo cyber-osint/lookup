@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global P2P Share</title>
+    <title>Global P2P Share (STUN/TURN)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --primary: #007AFF; --bg: #f2f2f7; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); width: 90%; max-width: 380px; text-align: center; }
         .id-badge { font-size: 2.2rem; font-weight: 800; color: var(--primary); letter-spacing: 4px; margin: 15px 0; padding: 15px; border: 2px solid var(--primary); border-radius: 12px; cursor: pointer; background: #f0f7ff; }
-        .id-badge:hover { background: #e1efff; }
         input[type="text"] { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; text-align: center; font-size: 1.1rem; text-transform: uppercase; font-weight: bold; }
         button { width: 100%; padding: 15px; border: none; border-radius: 10px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; font-size: 1rem; }
-        #status { margin-top: 20px; font-size: 0.85rem; color: #86868b; line-height: 1.4; }
+        #status { margin-top: 20px; font-size: 0.85rem; color: #86868b; line-height: 1.4; word-break: break-all; }
         #file-section { margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee; display: none; }
         .download-btn { display: block; margin-top: 15px; padding: 12px; background: #34c759; color: white; text-decoration: none; border-radius: 10px; font-weight: bold; }
     </style>
@@ -21,8 +20,8 @@
 <body>
 
 <div class="card">
-    <h2 style="margin-top:0">📁 P2P 전송</h2>
-    <p style="font-size: 0.9rem; color: #666;">내 코드 (클릭하여 주소 복사)</p>
+    <h2 style="margin-top:0">📡 글로벌 전송</h2>
+    <p style="font-size: 0.8rem; color: #666;">내 코드 (클릭하여 주소 복사)</p>
     <div id="my-id" class="id-badge" onclick="copyLink()">----</div>
     
     <input type="text" id="target-id" placeholder="상대방 4자리 코드" maxlength="4" oninput="this.value = this.value.toUpperCase()">
@@ -31,60 +30,69 @@
     <div id="status">네트워크 초기화 중...</div>
 
     <div id="file-section">
-        <input type="file" id="file-input" style="font-size: 0.8rem;">
-        <button onclick="sendFile()" style="margin-top:15px; background: #1c1c1e;">파일 전송 시작</button>
+        <input type="file" id="file-input">
+        <button onclick="sendFile()" style="margin-top:15px; background: #1c1c1e;">파일 전송</button>
     </div>
 </div>
 
 <script>
-    // 1. 4자리 랜덤 ID 생성
     const myId = Math.random().toString(36).substring(2, 6).toUpperCase();
     
-    // 2. 다른 네트워크에서도 작동하도록 STUN 서버 설정 (ICE Servers)
-    const peer = new Peer(myId, {
+    // PeerJS 설정: STUN과 TURN 서버 리스트
+    const peerConfig = {
         config: {
             'iceServers': [
+                // 1. Google STUN 서버 (무료, IP 식별용)
                 { url: 'stun:stun.l.google.com:19302' },
                 { url: 'stun:stun1.l.google.com:19302' },
-                { url: 'stun:stun2.l.google.com:19302' }
-            ]
+                // 2. Open Relay Project (공용 무료 TURN 서버 예시)
+                // 주의: 공용 서버는 속도가 느리거나 불안정할 수 있습니다.
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
+            ],
+            'sdpSemantics': 'unified-plan'
         }
-    });
+    };
 
+    const peer = new Peer(myId, peerConfig);
     let conn;
 
     peer.on('open', (id) => {
         document.getElementById('my-id').innerText = id;
-        document.getElementById('status').innerText = "대기 중... 상대방에게 코드를 알려주세요.";
+        document.getElementById('status').innerText = "대기 중... 상대방 코드를 입력하거나 링크를 보내세요.";
         
-        // 초대 링크 자동 접속 처리
         const urlParams = new URLSearchParams(window.location.search);
-        const joinId = urlParams.get('join');
-        if (joinId) {
-            document.getElementById('target-id').value = joinId.toUpperCase();
-            setTimeout(connectToPeer, 800);
+        if (urlParams.get('join')) {
+            document.getElementById('target-id').value = urlParams.get('join').toUpperCase();
+            setTimeout(connectToPeer, 1000);
         }
     });
 
-    // 상대방 연결 수신
     peer.on('connection', (connection) => {
         conn = connection;
-        initConnection();
+        setupEvents();
     });
 
-    // 버튼 클릭 연결
     function connectToPeer() {
         const targetId = document.getElementById('target-id').value.toUpperCase();
         if (!targetId || targetId === myId) return;
         
-        document.getElementById('status').innerText = "연결 통로 찾는 중...";
+        document.getElementById('status').innerText = "연결 경로 분석 중 (STUN/TURN)...";
         conn = peer.connect(targetId, { reliable: true });
-        initConnection();
+        setupEvents();
     }
 
-    function initConnection() {
+    function setupEvents() {
         conn.on('open', () => {
-            document.getElementById('status').innerText = "✅ 연결됨! 파일 선택이 가능합니다.";
+            document.getElementById('status').innerText = "✅ 보안 터널 연결 완료!";
             document.getElementById('file-section').style.display = 'block';
             document.getElementById('connect-btn').disabled = true;
         });
@@ -94,28 +102,28 @@
                 const blob = new Blob([data.file], { type: data.type });
                 const url = URL.createObjectURL(blob);
                 document.getElementById('status').innerHTML = 
-                    `<a href="${url}" download="${data.fileName}" class="download-btn">파일 다운로드 (${data.fileName})</a>`;
+                    `<a href="${url}" download="${data.fileName}" class="download-btn">⬇️ 다운로드: ${data.fileName}</a>`;
             }
         });
 
-        conn.on('error', (err) => {
-            alert("연결 중 오류가 발생했습니다.");
-            console.error(err);
+        conn.on('close', () => {
+            document.getElementById('status').innerText = "연결이 종료되었습니다.";
+            document.getElementById('file-section').style.display = 'none';
         });
     }
 
     function sendFile() {
         const fileInput = document.getElementById('file-input');
         const file = fileInput.files[0];
-        if (!file) return alert("전송할 파일을 선택해주세요.");
+        if (!file) return alert("파일을 선택하세요.");
 
-        document.getElementById('status').innerText = "전송 중... 잠시만 기다려주세요.";
+        document.getElementById('status').innerText = "파일 전송 중... (브라우저를 닫지 마세요)";
         conn.send({
             file: file,
             fileName: file.name,
             type: file.type
         });
-        document.getElementById('status').innerText = "보내기 완료!";
+        document.getElementById('status').innerText = "전송 완료!";
     }
 
     function copyLink() {
@@ -124,9 +132,8 @@
     }
 
     peer.on('error', (err) => {
-        if(err.type === 'peer-denied') document.getElementById('status').innerText = "연결이 거부되었습니다.";
-        else if(err.type === 'peer-not-found') document.getElementById('status').innerText = "해당 코드를 가진 사용자가 없습니다.";
-        else console.error(err);
+        console.error(err.type);
+        document.getElementById('status').innerText = "오류: " + err.type;
     });
 </script>
 
