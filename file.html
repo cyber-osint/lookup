@@ -2,112 +2,139 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>P2P 파일 셰어링</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick P2P Share</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; max-width: 500px; margin: 50px auto; line-height: 1.6; }
-        .box { border: 1px solid #ccc; padding: 20px; border-radius: 8px; background: #f9f9f9; }
-        .status { font-weight: bold; color: #007bff; }
-        input, button { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
-        #log { font-size: 0.8em; color: #666; height: 100px; overflow-y: auto; border: 1px solid #eee; padding: 5px; margin-top: 10px; }
+        :root { --primary: #4a90e2; --bg: #f4f7f6; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .id-badge { font-size: 2rem; font-weight: 800; color: var(--primary); letter-spacing: 5px; margin: 10px 0; padding: 10px; border: 2px dashed var(--primary); border-radius: 10px; cursor: pointer; }
+        .input-group { margin-top: 20px; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; text-align: center; font-size: 1rem; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #status { margin-top: 15px; font-size: 0.9rem; color: #666; min-height: 1.2em; }
+        #file-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; display: none; }
+        .download-link { display: inline-block; margin-top: 10px; padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-<div class="box">
-    <h2>📂 P2P 파일 전송</h2>
-    <p>내 ID: <span id="my-id" class="status">연결 중...</span></p>
+<div class="card">
+    <h2>🚀 Quick Share</h2>
+    <p style="font-size: 0.9rem; color: #888;">내 접속 코드 (클릭 시 주소 복사)</p>
+    <div id="my-id" class="id-badge" onclick="copyInviteLink()">----</div>
     
-    <hr>
-    
-    <input type="text" id="receiver-id" placeholder="상대방 ID 입력">
-    <button onclick="connectToPeer()">상대방과 연결하기</button>
-    
-    <hr>
-    
-    <input type="file" id="file-input" disabled>
-    <button id="send-btn" onclick="sendFile()" disabled>파일 보내기</button>
-    
-    <div id="status-msg"></div>
-    <div id="log"></div>
+    <div class="input-group">
+        <input type="text" id="target-id" placeholder="상대방 4자리 코드 입력" maxlength="4">
+        <button id="connect-btn" onclick="connectToPeer()">연결하기</button>
+    </div>
+
+    <div id="status">PeerJS 서버 연결 중...</div>
+
+    <div id="file-section">
+        <input type="file" id="file-input">
+        <button id="send-btn" onclick="sendFile()" style="margin-top:10px; background: #333;">파일 전송</button>
+    </div>
 </div>
 
 <script>
-    let peer = new Peer(); // PeerJS 객체 생성 (자동으로 ID 할당)
-    let conn;
-
-    // 1. 내 ID 생성 완료 시
-    peer.on('open', (id) => {
-        document.getElementById('my-id').innerText = id;
-        log("내 ID가 생성되었습니다: " + id);
-    });
-
-    // 2. 누군가 나에게 연결을 시도할 때
-    peer.on('connection', (connection) => {
-        conn = connection;
-        setupConnection();
-        log("상대방이 연결되었습니다.");
-    });
-
-    // 3. 내가 상대방에게 연결 시도
-    function connectToPeer() {
-        const targetId = document.getElementById('receiver-id').value;
-        if (!targetId) return alert("상대 ID를 입력하세요.");
-        
-        conn = peer.connect(targetId);
-        setupConnection();
-        log(targetId + "에게 연결 시도 중...");
+    // 1. 4자리 랜덤 ID 생성 함수
+    function generateId() {
+        return Math.random().toString(36).substring(2, 6).toUpperCase();
     }
 
-    // 4. 연결된 후 이벤트 처리 (데이터 수신 등)
-    function setupConnection() {
+    const myId = generateId();
+    const peer = new Peer(myId);
+    let conn;
+
+    // 2. 초기화 및 URL 파라미터 확인
+    peer.on('open', (id) => {
+        document.getElementById('my-id').innerText = id;
+        document.getElementById('status').innerText = "대기 중...";
+        
+        // URL에 join 파라미터가 있으면 자동 연결 시도
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinId = urlParams.get('join');
+        if (joinId) {
+            document.getElementById('target-id').value = joinId;
+            setTimeout(connectToPeer, 500); // 서버 등록 시간을 위해 살짝 지연
+        }
+    });
+
+    // 3. 상대방이 연결해올 때
+    peer.on('connection', (connection) => {
+        conn = connection;
+        handleConnection();
+    });
+
+    // 4. 내가 직접 연결할 때
+    function connectToPeer() {
+        const targetId = document.getElementById('target-id').value.toUpperCase();
+        if (!targetId) return;
+        
+        document.getElementById('status').innerText = "연결 시도 중...";
+        conn = peer.connect(targetId);
+        handleConnection();
+    }
+
+    // 5. 연결 성공 후 공통 로직
+    function handleConnection() {
         conn.on('open', () => {
-            log("연결이 성공했습니다! 이제 파일을 보낼 수 있습니다.");
-            document.getElementById('file-input').disabled = false;
-            document.getElementById('send-btn').disabled = false;
+            document.getElementById('status').innerText = "✅ 연결 성공!";
+            document.getElementById('file-section').style.display = 'block';
+            document.getElementById('connect-btn').disabled = true;
         });
 
         conn.on('data', (data) => {
-            // 파일 수신 로직
             if (data.file) {
                 const blob = new Blob([data.file], { type: data.type });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = data.fileName;
-                a.innerHTML = `⬇️ ${data.fileName} 다운로드`;
-                a.style.display = 'block';
-                document.getElementById('status-msg').appendChild(a);
-                log("파일을 받았습니다: " + data.fileName);
+                const statusDiv = document.getElementById('status');
+                statusDiv.innerHTML = `<a href="${url}" download="${data.fileName}" class="download-link">⬇️ ${data.fileName} 받기</a>`;
             }
+        });
+
+        conn.on('close', () => {
+            alert("연결이 끊어졌습니다.");
+            location.reload();
         });
     }
 
-    // 5. 파일 전송 함수
+    // 6. 파일 전송
     function sendFile() {
         const fileInput = document.getElementById('file-input');
         const file = fileInput.files[0];
-
         if (!file) return alert("파일을 선택하세요.");
-        if (!conn || !conn.open) return alert("연결이 되어있지 않습니다.");
 
-        log("파일 전송 중: " + file.name);
-        
-        // PeerJS를 통해 데이터 객체 전송
+        document.getElementById('status').innerText = "파일 전송 중...";
         conn.send({
             file: file,
             fileName: file.name,
             type: file.type
         });
-        
-        log("전송 완료!");
+        document.getElementById('status').innerText = "전송 완료!";
     }
 
-    function log(msg) {
-        const logDiv = document.getElementById('log');
-        logDiv.innerHTML += `> ${msg}<br>`;
-        logDiv.scrollTop = logDiv.scrollHeight;
+    // 7. 초대 링크 복사 기능
+    function copyInviteLink() {
+        const url = `${window.location.origin}${window.location.pathname}?join=${myId}`;
+        navigator.clipboard.writeText(url).then(() => {
+            alert("초대 링크가 복사되었습니다! 상대방에게 전달하세요.");
+        });
     }
+
+    // 에러 처리
+    peer.on('error', (err) => {
+        if(err.type === 'unavailable-id') {
+            alert("ID 충돌 발생! 페이지를 새로고침합니다.");
+            location.reload();
+        } else {
+            console.error(err);
+            document.getElementById('status').innerText = "에러: " + err.type;
+        }
+    });
 </script>
 
 </body>
