@@ -8,89 +8,97 @@
     <style>
         :root { --primary: #007AFF; --bg: #f2f2f7; --success: #34c759; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); width: 90%; max-width: 380px; text-align: center; }
-        .id-badge { font-size: 2.2rem; font-weight: 800; color: var(--primary); letter-spacing: 4px; margin: 15px 0; padding: 15px; border: 2px solid var(--primary); border-radius: 12px; cursor: pointer; background: #f0f7ff; transition: 0.2s; }
-        .id-badge:active { transform: scale(0.95); background: #e1efff; }
-        input[type="text"] { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; text-align: center; font-size: 1.1rem; text-transform: uppercase; font-weight: bold; }
-        button { width: 100%; padding: 15px; border: none; border-radius: 10px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .card { background: white; padding: 30px; border-radius: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.12); width: 90%; max-width: 400px; text-align: center; }
+        .id-badge { font-size: 2.2rem; font-weight: 800; color: var(--primary); letter-spacing: 4px; margin: 15px 0; padding: 18px; border: 2px solid var(--primary); border-radius: 16px; cursor: pointer; background: #f0f7ff; transition: 0.2s; }
+        .id-badge:hover { background: #e1efff; }
+        input[type="text"] { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 12px; box-sizing: border-box; text-align: center; font-size: 1.1rem; text-transform: uppercase; font-weight: bold; outline: none; }
+        input[type="text"]:focus { border-color: var(--primary); }
+        button { width: 100%; padding: 16px; border: none; border-radius: 12px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; }
+        button:active { transform: scale(0.98); opacity: 0.9; }
         button:disabled { background: #ccc; cursor: not-allowed; }
-        #status { margin-top: 20px; font-size: 0.85rem; color: #86868b; line-height: 1.4; min-height: 40px; }
+        #status { margin-top: 20px; font-size: 0.9rem; color: #666; line-height: 1.5; min-height: 45px; word-break: break-all; }
         #file-section { margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee; display: none; }
-        .download-btn { display: block; margin-top: 15px; padding: 12px; background: var(--success); color: white; text-decoration: none; border-radius: 10px; font-weight: bold; box-shadow: 0 4px 10px rgba(52, 199, 89, 0.3); }
-        .progress-bar { width: 100%; height: 6px; background: #eee; border-radius: 3px; margin-top: 10px; overflow: hidden; display: none; }
-        .progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.3s; }
+        .download-btn { display: block; margin-top: 15px; padding: 14px; background: var(--success); color: white; text-decoration: none; border-radius: 12px; font-weight: bold; box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3); }
+        .progress-bar { width: 100%; height: 8px; background: #eee; border-radius: 4px; margin-top: 15px; overflow: hidden; display: none; }
+        .progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.2s; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2 style="margin-top:0">📡 글로벌 전송</h2>
-    <p style="font-size: 0.8rem; color: #666;">내 코드 (클릭하여 주소 복사)</p>
-    <div id="my-id" class="id-badge" onclick="copyLink()">----</div>
+    <h2 style="margin-top:0; font-size: 1.5rem;">🚀 퀵 P2P 전송</h2>
+    <p style="font-size: 0.85rem; color: #888; margin-bottom: 5px;">내 접속 코드 (클릭 시 링크 복사)</p>
+    <div id="my-id" class="id-badge" onclick="copyInviteLink()">----</div>
     
-    <input type="text" id="target-id" placeholder="상대방 4자리 코드" maxlength="4" oninput="this.value = this.value.toUpperCase()">
-    <button id="connect-btn" onclick="connectToPeer()">연결하기</button>
+    <input type="text" id="target-id" placeholder="상대방 4자리 코드 입력" maxlength="4" oninput="this.value = this.value.toUpperCase()">
+    <button id="connect-btn" onclick="connectToPeer()">상대방과 연결하기</button>
 
-    <div id="status">네트워크 초기화 중...</div>
+    <div id="status">네트워크 신호 대기 중...</div>
     <div class="progress-bar" id="p-bar"><div class="progress-fill" id="p-fill"></div></div>
 
     <div id="file-section">
-        <input type="file" id="file-input">
-        <button id="send-btn" onclick="sendFile()" style="margin-top:15px; background: #1c1c1e;">파일 전송</button>
+        <input type="file" id="file-input" style="font-size: 0.8rem; width: 100%;">
+        <button id="send-btn" onclick="sendFile()" style="margin-top:15px; background: #1c1c1e;">파일 보내기</button>
     </div>
 </div>
 
 <script>
-    // 1. 고유 ID 생성 (4자리)
+    // 1. 4자리 랜덤 ID 생성
     const myId = Math.random().toString(36).substring(2, 6).toUpperCase();
     
-    // 2. STUN/TURN 설정 (외부망 연결 핵심)
+    // 2. 요청하신 최신 STUN 리스트 + TURN 설정
     const peer = new Peer(myId, {
         config: {
             'iceServers': [
-                { url: 'stun:stun.l.google.com:19302' },
-                { url: 'stun:stun1.l.google.com:19302' },
+                // IPv4/IPv6 지원 STUN 서버들
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun.cloudflare.com:3478' },
+                { urls: 'stun:stun.nextcloud.com:3478' },
+                // 무료 TURN Relay (방화벽 우회용)
                 {
                     urls: 'turn:openrelay.metered.ca:443',
                     username: 'openrelayproject',
                     credential: 'openrelayproject'
                 }
             ],
-            'iceCandidatePoolSize': 10
+            'iceCandidatePoolSize': 10,
+            'sdpSemantics': 'unified-plan'
         },
-        debug: 1 // 에러 로그만 출력
+        debug: 1
     });
 
     let conn;
 
-    // 초기화 완료
+    // 서버 연결 완료 시
     peer.on('open', (id) => {
         document.getElementById('my-id').innerText = id;
-        document.getElementById('status').innerText = "대기 중... 코드를 공유하세요.";
+        document.getElementById('status').innerText = "상대방에게 코드를 알려주세요.";
         
-        // 자동 조인 체크
+        // 초대 링크 접속 처리
         const urlParams = new URLSearchParams(window.location.search);
         const joinId = urlParams.get('join');
         if (joinId && joinId.toUpperCase() !== myId) {
             document.getElementById('target-id').value = joinId.toUpperCase();
-            setTimeout(connectToPeer, 1000);
+            document.getElementById('status').innerText = "초대 링크로 연결 시도 중...";
+            setTimeout(connectToPeer, 1500);
         }
     });
 
-    // 상대방의 연결 요청 수신
+    // 누군가 나에게 연결했을 때
     peer.on('connection', (connection) => {
         conn = connection;
         setupEvents();
     });
 
-    // 내가 연결 시도
+    // 내가 상대방에게 연결할 때
     function connectToPeer() {
         const targetId = document.getElementById('target-id').value.toUpperCase();
         if (!targetId || targetId === myId) return;
         
-        document.getElementById('status').innerText = "상대방 찾는 중 (STUN/TURN)...";
+        document.getElementById('status').innerText = "공인 IP 찾는 중 (STUN/TURN)...";
         
-        // 옵션 최적화: binary 직렬화로 속도 향상
+        // binary 직렬화 설정으로 전송 최적화
         conn = peer.connect(targetId, { 
             reliable: true,
             serialization: 'binary' 
@@ -98,62 +106,57 @@
         setupEvents();
     }
 
-    // 연결 후 이벤트 핸들링
+    // 연결 성공 후 공통 이벤트
     function setupEvents() {
         conn.on('open', () => {
-            document.getElementById('status').innerText = "✅ 연결됨! 파일을 보낼 수 있습니다.";
+            document.getElementById('status').innerText = "✅ 연결 성공! 파일을 선택하세요.";
             document.getElementById('file-section').style.display = 'block';
             document.getElementById('connect-btn').disabled = true;
             document.getElementById('target-id').disabled = true;
         });
 
         conn.on('data', (data) => {
-            // 파일 수신 로직 (Blob 형태)
+            // 파일 수신 처리
             if (data && data.file) {
                 const blob = new Blob([data.file], { type: data.type });
                 const url = URL.createObjectURL(blob);
                 document.getElementById('status').innerHTML = 
-                    `<a href="${url}" download="${data.fileName}" class="download-btn">⬇️ 다운로드: ${data.fileName}</a>`;
+                    `<a href="${url}" download="${data.fileName}" class="download-btn">⬇️ 파일 받기: ${data.fileName}</a>`;
                 hideProgress();
             }
         });
 
         conn.on('close', () => {
-            alert("연결이 종료되었습니다.");
+            alert("연결이 끊어졌습니다. 페이지를 새로고침합니다.");
             location.reload();
         });
 
         conn.on('error', (err) => {
-            console.error("Conn Error:", err);
-            document.getElementById('status').innerText = "연결 오류가 발생했습니다.";
+            console.error("Connection error:", err);
+            document.getElementById('status').innerText = "연결 중 오류가 발생했습니다.";
         });
     }
 
-    // 파일 전송 로직
+    // 파일 전송 함수
     function sendFile() {
         const fileInput = document.getElementById('file-input');
         const file = fileInput.files[0];
-        if (!file) return alert("파일을 선택하세요.");
+        if (!file) return alert("파일을 선택해주세요.");
 
-        // 파일 크기 체크 (PeerJS 직렬화 한계로 인해 약 100MB 권장)
-        if (file.size > 100 * 1024 * 1024) {
-            alert("100MB 이상의 파일은 전송이 불안정할 수 있습니다.");
-        }
-
-        document.getElementById('status').innerText = "파일 전송 중...";
+        document.getElementById('status').innerText = "파일 전송 중... 잠시만 기다리세요.";
         showProgress();
 
-        // 파일 전송 실행
+        // 데이터 전송
         conn.send({
             file: file,
             fileName: file.name,
             type: file.type
         });
 
-        // PeerJS는 데이터 전송 완료 시점을 콜백으로 주지 않으므로 가상 게이지 처리
+        // 가상 진행 바 (WebRTC 데이터 채널은 정확한 콜백을 지원하지 않음)
         let p = 0;
         const interval = setInterval(() => {
-            p += 10;
+            p += 5;
             document.getElementById('p-fill').style.width = p + "%";
             if (p >= 100) {
                 clearInterval(interval);
@@ -172,22 +175,22 @@
         document.getElementById('p-bar').style.display = 'none';
     }
 
-    function copyLink() {
+    function copyInviteLink() {
         const link = `${window.location.origin}${window.location.pathname}?join=${myId}`;
         navigator.clipboard.writeText(link).then(() => {
-            const status = document.getElementById('status');
-            const originalText = status.innerText;
-            status.innerText = "📋 주소가 복사되었습니다!";
-            setTimeout(() => status.innerText = originalText, 2000);
+            alert("초대 링크가 복사되었습니다!");
         });
     }
 
+    // 에러 핸들링
     peer.on('error', (err) => {
-        let msg = "오류 발생";
-        if(err.type === 'peer-not-found') msg = "상대방을 찾을 수 없습니다.";
-        if(err.type === 'unavailable-id') msg = "ID가 중복되었습니다. 다시 시도하세요.";
-        document.getElementById('status').innerText = "❌ " + msg;
-        console.error("Peer Error Type:", err.type);
+        let errorMsg = "네트워크 오류";
+        if(err.type === 'peer-not-found') errorMsg = "상대방 코드를 찾을 수 없습니다.";
+        if(err.type === 'unavailable-id') errorMsg = "ID 중복! 새로고침 해주세요.";
+        if(err.type === 'network') errorMsg = "서버 연결에 실패했습니다.";
+        
+        document.getElementById('status').innerText = "❌ " + errorMsg;
+        console.error("Peer Error:", err.type);
     });
 </script>
 
