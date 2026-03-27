@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>OpenReplay 방식 (DOM 캡처) 원격 제어</title>
+    <title>OpenReplay 방식 (DOM 캡처) 원격 제어 - 동기화 패치</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
@@ -34,8 +34,8 @@
 <body>
 
     <div style="padding: 0 20px;">
-        <h2>🛠 DOM 캡처 원격 제어 (방화벽 우회)</h2>
-        <p>비디오 스트리밍을 쓰지 않고 HTML 태그 변화를 텍스트로 주고받습니다.</p>
+        <h2>🛠 DOM 캡처 원격 제어 (방화벽 우회 모드)</h2>
+        <p>비디오 스트리밍 없이 HTML 구조와 변화를 텍스트로 실시간 동기화합니다.</p>
     </div>
     
     <div class="controls-wrapper">
@@ -76,8 +76,9 @@
 <script>
     let peer;
     let dataConn;
-    let replayer; // rrweb 리플레이어 객체
+    let replayer; 
 
+    // 디버그 로그 출력 함수
     function log(msg) {
         const logBox = document.getElementById('debugLog');
         logBox.innerText += '\n' + msg;
@@ -107,28 +108,31 @@
             log('[Host] 방 생성 완료: ' + id);
         });
 
-        // 게스트가 텍스트 채널로 접속했을 때
         peer.on('connection', conn => {
             dataConn = conn;
             
             conn.on('open', () => {
-                document.getElementById('hostStatus').innerText = '✅ 게스트 접속 완료! 캡처 전송 중...';
-                log('[Host] 게스트 제어 채널 연결됨. rrweb 녹화 시작.');
-
-                // 🌟 핵심: rrweb을 이용해 내 화면(DOM) 캡처 시작
-                rrweb.record({
-                    emit(event) {
-                        // DOM 변화나 마우스 움직임이 생길 때마다 텍스트(JSON)로 게스트에게 전송
-                        if (dataConn && dataConn.open) {
-                            dataConn.send({ type: 'rrweb_event', data: event });
-                        }
-                    }
-                });
+                document.getElementById('hostStatus').innerText = '게스트 접속! 화면 준비 신호 대기 중...';
+                log('[Host] 게스트 제어 채널 연결됨. (게스트의 준비 완료 신호를 기다립니다)');
             });
             
-            // 게스트가 보낸 클릭 이벤트 수신
             conn.on('data', payload => {
-                if (payload.type === 'remote_click') {
+                // 🌟 게스트가 준비되었다는 신호를 받으면 그때 녹화 시작! (초기 데이터 유실 방지)
+                if (payload.type === 'guest_ready') {
+                    document.getElementById('hostStatus').innerText = '✅ 게스트 준비 완료! 캡처 전송 중...';
+                    log('[Host] 게스트 준비 완료. rrweb 녹화 및 전송 시작!');
+
+                    rrweb.record({
+                        emit(event) {
+                            // 대용량 데이터 유실을 막기 위해 JSON 문자열로 변환하여 전송
+                            if (dataConn && dataConn.open) {
+                                dataConn.send({ type: 'rrweb_event', data: JSON.stringify(event) });
+                            }
+                        }
+                    });
+                }
+                // 게스트가 보낸 클릭 이벤트 수신
+                else if (payload.type === 'remote_click') {
                     showPointer(payload.x, payload.y);
                     log(`[Host] 원격 클릭 수신: X(${Math.round(payload.x*100)}%), Y(${Math.round(payload.y*100)}%)`);
                 }
@@ -145,31 +149,37 @@
         
         peer.on('open', () => {
             log('[Guest] 서버 접속 완료, 호스트 연결 시도...');
-            
-            // 호스트의 DataChannel(텍스트)에 접속
             dataConn = peer.connect(hostId);
             
             dataConn.on('open', () => {
                 document.getElementById('guestStatus').innerText = '✅ 화면 수신 중!';
-                log('[Guest] 텍스트 제어 채널 연결 성공. 데이터 수신 대기.');
+                log('[Guest] 텍스트 제어 채널 연결 성공. 플레이어 초기화 중...');
                 
                 const container = document.getElementById('replayer-container');
                 container.style.display = 'block';
                 container.scrollIntoView({ behavior: 'smooth' });
 
-                // 🌟 핵심: 수신한 이벤트를 실시간으로 재생할 rrweb 플레이어 생성
+                // 플레이어 초기화
                 replayer = new rrweb.Replayer({
                     target: container,
-                    liveMode: true, // 실시간 스트리밍 모드
+                    liveMode: true, 
                 });
                 replayer.startLive();
+
+                // 🌟 플레이어 준비가 끝났다고 호스트에게 알려줌 (이때부터 호스트가 전체 스냅샷을 보냄)
+                dataConn.send({ type: 'guest_ready' });
+                log('[Guest] 플레이어 준비 완료. 호스트에게 데이터 전송 요청.');
             });
 
-            // 호스트로부터 데이터(DOM 텍스트)를 받을 때
             dataConn.on('data', payload => {
+                // 수신한 JSON 문자열을 다시 객체로 변환하여 렌더링
                 if (payload.type === 'rrweb_event' && replayer) {
-                    // 수신한 JSON 이벤트를 플레이어에 집어넣어 화면(DOM)을 똑같이 그림
-                    replayer.addEvent(payload.data);
+                    try {
+                        const eventData = JSON.parse(payload.data);
+                        replayer.addEvent(eventData);
+                    } catch (e) {
+                        log('[Guest] 데이터 파싱 에러: ' + e);
+                    }
                 }
             });
         });
