@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>PeerJS P2P 채팅 테스트</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; max-width: 500px; margin: 20px auto; text-align: center; background: #f0f2f5; }
+        #chat-box { height: 300px; border: 1px solid #ddd; background: white; overflow-y: scroll; padding: 10px; margin-bottom: 10px; text-align: left; border-radius: 8px; }
+        .msg { margin: 5px 0; padding: 8px; border-radius: 5px; display: inline-block; clear: both; }
+        .me { background: #dcf8c6; float: right; }
+        .peer { background: #fff; border: 1px solid #ddd; float: left; }
+        input { width: 70%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+        button { padding: 10px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+        .status-box { background: #333; color: white; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <h2>P2P 채팅 (No Camera)</h2>
+
+    <div class="status-box">
+        내 접속 ID: <span id="my-id">연결 중...</span>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="peer-id-input" placeholder="상대방 ID 입력">
+        <button id="connect-btn">연결하기</button>
+    </div>
+
+    <div id="chat-box"></div>
+
+    <div>
+        <input type="text" id="message-input" placeholder="메시지 입력..." disabled>
+        <button id="send-btn" disabled>전송</button>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const myIdDisplay = document.getElementById('my-id');
+        const peerIdInput = document.getElementById('peer-id-input');
+        const connectBtn = document.getElementById('connect-btn');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        const peer = new Peer(); // PeerJS 클라우드 서버 사용
+        let conn; // 연결 객체
+
+        // 1. 내 ID 생성 완료 시
+        peer.on('open', (id) => {
+            myIdDisplay.innerText = id;
+            console.log('ID 생성됨:', id);
+        });
+
+        // 2. 상대방이 나에게 연결을 시도했을 때 (수신측)
+        peer.on('connection', (connection) => {
+            conn = connection;
+            setupChat();
+            addMessage("시스템", "상대방과 연결되었습니다!", "peer");
+        });
+
+        // 3. 내가 상대방에게 연결을 시도할 때 (발신측)
+        connectBtn.onclick = () => {
+            const peerId = peerIdInput.value;
+            if (!peerId) return alert("상대방 ID를 입력하세요.");
+            
+            conn = peer.connect(peerId);
+            setupChat();
+            addMessage("시스템", "연결 시도 중...", "me");
+        };
+
+        // 4. 채팅 메시지 처리 로직 설정
+        function setupChat() {
+            conn.on('open', () => {
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                addMessage("시스템", "채팅 준비 완료!", "me");
+            });
+
+            conn.on('data', (data) => {
+                addMessage("상대방", data, "peer");
+            });
+
+            conn.on('error', (err) => {
+                console.error("채팅 에러:", err);
+            });
+        }
+
+        // 5. 메시지 전송 버튼
+        sendBtn.onclick = () => {
+            const msg = messageInput.value;
+            if (!msg || !conn) return;
+            
+            conn.send(msg); // WebRTC DataChannel을 통해 전송
+            addMessage("나", msg, "me");
+            messageInput.value = "";
+        };
+
+        // 메시지 화면 출력 함수
+        function addMessage(sender, text, type) {
+            const div = document.createElement('div');
+            div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            div.className = `msg ${type}`;
+            chat
