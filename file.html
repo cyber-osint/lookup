@@ -3,86 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quick P2P Share</title>
+    <title>Global P2P Share</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --primary: #4a90e2; --bg: #f4f7f6; }
-        body { font-family: 'Pretendard', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        .id-badge { font-size: 2rem; font-weight: 800; color: var(--primary); letter-spacing: 5px; margin: 10px 0; padding: 10px; border: 2px dashed var(--primary); border-radius: 10px; cursor: pointer; }
-        .input-group { margin-top: 20px; }
-        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; text-align: center; font-size: 1rem; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        #status { margin-top: 15px; font-size: 0.9rem; color: #666; min-height: 1.2em; }
-        #file-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; display: none; }
-        .download-link { display: inline-block; margin-top: 10px; padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; }
+        :root { --primary: #007AFF; --bg: #f2f2f7; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); width: 90%; max-width: 380px; text-align: center; }
+        .id-badge { font-size: 2.2rem; font-weight: 800; color: var(--primary); letter-spacing: 4px; margin: 15px 0; padding: 15px; border: 2px solid var(--primary); border-radius: 12px; cursor: pointer; background: #f0f7ff; }
+        .id-badge:hover { background: #e1efff; }
+        input[type="text"] { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; text-align: center; font-size: 1.1rem; text-transform: uppercase; font-weight: bold; }
+        button { width: 100%; padding: 15px; border: none; border-radius: 10px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        #status { margin-top: 20px; font-size: 0.85rem; color: #86868b; line-height: 1.4; }
+        #file-section { margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee; display: none; }
+        .download-btn { display: block; margin-top: 15px; padding: 12px; background: #34c759; color: white; text-decoration: none; border-radius: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>🚀 Quick Share</h2>
-    <p style="font-size: 0.9rem; color: #888;">내 접속 코드 (클릭 시 주소 복사)</p>
-    <div id="my-id" class="id-badge" onclick="copyInviteLink()">----</div>
+    <h2 style="margin-top:0">📁 P2P 전송</h2>
+    <p style="font-size: 0.9rem; color: #666;">내 코드 (클릭하여 주소 복사)</p>
+    <div id="my-id" class="id-badge" onclick="copyLink()">----</div>
     
-    <div class="input-group">
-        <input type="text" id="target-id" placeholder="상대방 4자리 코드 입력" maxlength="4">
-        <button id="connect-btn" onclick="connectToPeer()">연결하기</button>
-    </div>
+    <input type="text" id="target-id" placeholder="상대방 4자리 코드" maxlength="4" oninput="this.value = this.value.toUpperCase()">
+    <button id="connect-btn" onclick="connectToPeer()">연결하기</button>
 
-    <div id="status">PeerJS 서버 연결 중...</div>
+    <div id="status">네트워크 초기화 중...</div>
 
     <div id="file-section">
-        <input type="file" id="file-input">
-        <button id="send-btn" onclick="sendFile()" style="margin-top:10px; background: #333;">파일 전송</button>
+        <input type="file" id="file-input" style="font-size: 0.8rem;">
+        <button onclick="sendFile()" style="margin-top:15px; background: #1c1c1e;">파일 전송 시작</button>
     </div>
 </div>
 
 <script>
-    // 1. 4자리 랜덤 ID 생성 함수
-    function generateId() {
-        return Math.random().toString(36).substring(2, 6).toUpperCase();
-    }
-
-    const myId = generateId();
-    const peer = new Peer(myId);
-    let conn;
-
-    // 2. 초기화 및 URL 파라미터 확인
-    peer.on('open', (id) => {
-        document.getElementById('my-id').innerText = id;
-        document.getElementById('status').innerText = "대기 중...";
-        
-        // URL에 join 파라미터가 있으면 자동 연결 시도
-        const urlParams = new URLSearchParams(window.location.search);
-        const joinId = urlParams.get('join');
-        if (joinId) {
-            document.getElementById('target-id').value = joinId;
-            setTimeout(connectToPeer, 500); // 서버 등록 시간을 위해 살짝 지연
+    // 1. 4자리 랜덤 ID 생성
+    const myId = Math.random().toString(36).substring(2, 6).toUpperCase();
+    
+    // 2. 다른 네트워크에서도 작동하도록 STUN 서버 설정 (ICE Servers)
+    const peer = new Peer(myId, {
+        config: {
+            'iceServers': [
+                { url: 'stun:stun.l.google.com:19302' },
+                { url: 'stun:stun1.l.google.com:19302' },
+                { url: 'stun:stun2.l.google.com:19302' }
+            ]
         }
     });
 
-    // 3. 상대방이 연결해올 때
-    peer.on('connection', (connection) => {
-        conn = connection;
-        handleConnection();
+    let conn;
+
+    peer.on('open', (id) => {
+        document.getElementById('my-id').innerText = id;
+        document.getElementById('status').innerText = "대기 중... 상대방에게 코드를 알려주세요.";
+        
+        // 초대 링크 자동 접속 처리
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinId = urlParams.get('join');
+        if (joinId) {
+            document.getElementById('target-id').value = joinId.toUpperCase();
+            setTimeout(connectToPeer, 800);
+        }
     });
 
-    // 4. 내가 직접 연결할 때
+    // 상대방 연결 수신
+    peer.on('connection', (connection) => {
+        conn = connection;
+        initConnection();
+    });
+
+    // 버튼 클릭 연결
     function connectToPeer() {
         const targetId = document.getElementById('target-id').value.toUpperCase();
-        if (!targetId) return;
+        if (!targetId || targetId === myId) return;
         
-        document.getElementById('status').innerText = "연결 시도 중...";
-        conn = peer.connect(targetId);
-        handleConnection();
+        document.getElementById('status').innerText = "연결 통로 찾는 중...";
+        conn = peer.connect(targetId, { reliable: true });
+        initConnection();
     }
 
-    // 5. 연결 성공 후 공통 로직
-    function handleConnection() {
+    function initConnection() {
         conn.on('open', () => {
-            document.getElementById('status').innerText = "✅ 연결 성공!";
+            document.getElementById('status').innerText = "✅ 연결됨! 파일 선택이 가능합니다.";
             document.getElementById('file-section').style.display = 'block';
             document.getElementById('connect-btn').disabled = true;
         });
@@ -91,49 +93,40 @@
             if (data.file) {
                 const blob = new Blob([data.file], { type: data.type });
                 const url = URL.createObjectURL(blob);
-                const statusDiv = document.getElementById('status');
-                statusDiv.innerHTML = `<a href="${url}" download="${data.fileName}" class="download-link">⬇️ ${data.fileName} 받기</a>`;
+                document.getElementById('status').innerHTML = 
+                    `<a href="${url}" download="${data.fileName}" class="download-btn">파일 다운로드 (${data.fileName})</a>`;
             }
         });
 
-        conn.on('close', () => {
-            alert("연결이 끊어졌습니다.");
-            location.reload();
+        conn.on('error', (err) => {
+            alert("연결 중 오류가 발생했습니다.");
+            console.error(err);
         });
     }
 
-    // 6. 파일 전송
     function sendFile() {
         const fileInput = document.getElementById('file-input');
         const file = fileInput.files[0];
-        if (!file) return alert("파일을 선택하세요.");
+        if (!file) return alert("전송할 파일을 선택해주세요.");
 
-        document.getElementById('status').innerText = "파일 전송 중...";
+        document.getElementById('status').innerText = "전송 중... 잠시만 기다려주세요.";
         conn.send({
             file: file,
             fileName: file.name,
             type: file.type
         });
-        document.getElementById('status').innerText = "전송 완료!";
+        document.getElementById('status').innerText = "보내기 완료!";
     }
 
-    // 7. 초대 링크 복사 기능
-    function copyInviteLink() {
-        const url = `${window.location.origin}${window.location.pathname}?join=${myId}`;
-        navigator.clipboard.writeText(url).then(() => {
-            alert("초대 링크가 복사되었습니다! 상대방에게 전달하세요.");
-        });
+    function copyLink() {
+        const link = `${window.location.origin}${window.location.pathname}?join=${myId}`;
+        navigator.clipboard.writeText(link).then(() => alert("초대 링크가 복사되었습니다."));
     }
 
-    // 에러 처리
     peer.on('error', (err) => {
-        if(err.type === 'unavailable-id') {
-            alert("ID 충돌 발생! 페이지를 새로고침합니다.");
-            location.reload();
-        } else {
-            console.error(err);
-            document.getElementById('status').innerText = "에러: " + err.type;
-        }
+        if(err.type === 'peer-denied') document.getElementById('status').innerText = "연결이 거부되었습니다.";
+        else if(err.type === 'peer-not-found') document.getElementById('status').innerText = "해당 코드를 가진 사용자가 없습니다.";
+        else console.error(err);
     });
 </script>
 
