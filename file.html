@@ -3,35 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>P2P Network Diagnostics</title>
+    <title>P2P Pro - Samsung Optimize</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --primary: #007AFF; --bg: #f2f2f7; --err: #ff453a; --ok: #32d74b; }
+        :root { --primary: #007AFF; --bg: #f2f2f7; --ok: #32d74b; --err: #ff453a; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); width: 100%; max-width: 400px; box-sizing: border-box; text-align: center; }
-        .id-badge { font-size: 2rem; font-weight: 800; color: var(--primary); letter-spacing: 3px; margin: 10px 0; padding: 10px; border: 2px solid var(--primary); border-radius: 12px; background: #f0f7ff; }
-        input { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 10px; text-align: center; font-size: 1rem; }
-        button { width: 100%; padding: 15px; border: none; border-radius: 10px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; }
-        #debug-log { width: 100%; max-width: 400px; background: #1c1c1e; color: var(--ok); font-family: 'Courier New', monospace; font-size: 11px; padding: 12px; border-radius: 12px; margin-top: 15px; height: 250px; overflow-y: auto; white-space: pre-wrap; box-sizing: border-box; line-height: 1.4; }
-        #file-section { margin-top: 15px; display: none; padding-top: 15px; border-top: 1px solid #eee; }
-        .download-btn { display: block; margin-top: 10px; padding: 12px; background: var(--ok); color: white; text-decoration: none; border-radius: 10px; font-weight: bold; text-align: center; }
+        .card { background: white; padding: 25px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); width: 100%; max-width: 400px; box-sizing: border-box; text-align: center; }
+        .id-badge { font-size: 2.2rem; font-weight: 800; color: var(--primary); letter-spacing: 4px; margin: 15px 0; padding: 15px; border: 2.5px solid var(--primary); border-radius: 16px; background: #f0f7ff; }
+        input { width: 100%; padding: 16px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 12px; text-align: center; font-size: 1.1rem; text-transform: uppercase; font-weight: bold; }
+        button { width: 100%; padding: 16px; border: none; border-radius: 12px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        #debug-log { width: 100%; max-width: 400px; background: #1c1c1e; color: var(--ok); font-family: monospace; font-size: 11px; padding: 15px; border-radius: 12px; margin-top: 15px; height: 280px; overflow-y: auto; white-space: pre-wrap; box-sizing: border-box; line-height: 1.5; border: 1px solid #333; }
+        #file-section { margin-top: 20px; display: none; padding-top: 20px; border-top: 1px solid #eee; }
+        .download-btn { display: block; margin-top: 15px; padding: 14px; background: var(--ok); color: white; text-decoration: none; border-radius: 12px; font-weight: bold; text-align: center; box-shadow: 0 4px 15px rgba(50, 215, 75, 0.3); }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h3 style="margin:0 0 10px 0">📡 네트워크 진단 모드</h3>
+    <h3 style="margin:0 0 10px 0">🚀 초고속 P2P 전송</h3>
     <div id="my-id" class="id-badge">----</div>
     <input type="text" id="target-id" placeholder="상대방 4자리 코드" maxlength="4" oninput="this.value = this.value.toUpperCase()">
-    <button id="connect-btn" onclick="connectToPeer()">연결 시도</button>
+    <button id="connect-btn" onclick="connectToPeer()">연결하기</button>
 
     <div id="file-section">
         <input type="file" id="file-input">
-        <button onclick="sendFile()" style="margin-top:10px; background: #333;">파일 전송</button>
+        <button onclick="sendFile()" style="margin-top:15px; background: #1c1c1e;">파일 전송 시작</button>
     </div>
 </div>
 
-<div id="debug-log">시스템 로그 초기화 중...</div>
+<div id="debug-log">네트워크 엔진 초기화 중...</div>
 
 <script>
     const logEl = document.getElementById('debug-log');
@@ -44,8 +44,8 @@
     }
 
     const myId = Math.random().toString(36).substring(2, 6).toUpperCase();
-    
-    // 1. 최적화된 네트워크 설정 (STUN/TURN 통합)
+
+    // 1. PeerJS 최적화 설정 (STUN/TURN 및 모바일 호환성 강화)
     const peer = new Peer(myId, {
         config: {
             'iceServers': [
@@ -60,67 +60,76 @@
             ],
             'iceCandidatePoolSize': 10,
             'iceTransportPolicy': 'all'
-        }
+        },
+        debug: 1
     });
 
     let conn;
 
     peer.on('open', (id) => {
         document.getElementById('my-id').innerText = id;
-        addLog(`시스템: 내 ID 생성됨 (${id})`, '#64d2ff');
-        addLog("힌트: 상대방이 접속해 있어야 연결이 가능합니다.");
+        addLog(`시스템: 온라인 상태 (ID: ${id})`, '#64d2ff');
     });
 
-    // 상대방의 연결 요청을 받았을 때
+    // 상대방의 연결 수락 로직
     peer.on('connection', (connection) => {
-        addLog(`[Signal] 상대(${connection.peer})의 제안 수신`, '#64d2ff');
+        addLog(`[Signal] 상대(${connection.peer})가 연결을 시도합니다.`, '#64d2ff');
         conn = connection;
         setupDiagnostics();
     });
 
     function connectToPeer() {
         const targetId = document.getElementById('target-id').value;
-        if (!targetId) return;
+        if (!targetId || targetId === myId) return;
         
-        addLog(`[Signal] ${targetId}에게 연결 제안 발송...`);
-        conn = peer.connect(targetId, { reliable: true, serialization: 'binary' });
+        addLog(`[Signal] ${targetId}에게 통로 개설 요청 중...`);
+        // 모바일 최적화를 위해 reliable 데이터 채널 강제 사용
+        conn = peer.connect(targetId, { 
+            reliable: true, 
+            serialization: 'binary'
+        });
         setupDiagnostics();
     }
 
-    // 2. 네트워크 정밀 진단 로직
     function setupDiagnostics() {
+        if (!conn) return;
+
         const pc = conn.peerConnection;
 
-        // ICE 수집 과정 모니터링
-        pc.onicecandidate = (e) => {
-            if (e.candidate) {
-                const type = e.candidate.candidate.split(' ')[7];
-                addLog(`🔍 후보 수집: ${type} (네트워크 주소 확보)`, '#888');
-            }
-        };
-
-        // 연결 단계 모니터링 (가장 중요)
+        // ICE 상태 변화 감시 (P2P 통로 구축 단계)
         pc.oniceconnectionstatechange = () => {
             const state = pc.iceConnectionState;
             let color = "#64d2ff";
-            if (state === "connected") color = "#32d74b";
+            if (state === "connected" || state === "completed") color = "#32d74b";
             if (state === "failed" || state === "disconnected") color = "#ff453a";
             
-            addLog(`📡 연결 상태: ${state.toUpperCase()}`, color);
+            addLog(`📡 네트워크 상태: ${state.toUpperCase()}`, color);
             
-            if (state === "failed") {
-                addLog("⚠️ 원인: 방화벽 차단 가능성 높음. LTE 전환 권장.", "#ff453a");
+            if (state === "connected") {
+                document.getElementById('file-section').style.display = 'block';
+                document.getElementById('connect-btn').disabled = true;
+                addLog("🎉 연결 성공! 파일 전송이 가능합니다.", "#32d74b");
+            }
+        };
+
+        // ICE 후보 수집 로그
+        pc.onicecandidate = (e) => {
+            if (e.candidate) {
+                const type = e.candidate.candidate.split(' ')[7];
+                addLog(`🔍 후보 발견: ${type}`, "#888");
             }
         };
 
         conn.on('open', () => {
-            addLog("✅ 연결 성공! 파일 전송 섹션 활성화", "#32d74b");
-            document.getElementById('file-section').style.display = 'block';
-            document.getElementById('connect-btn').disabled = true;
+            // 일부 브라우저에서 oniceconnectionstatechange가 늦을 경우를 대비
+            if (document.getElementById('file-section').style.display !== 'block') {
+                addLog("✅ 채널 수동 활성화", "#32d74b");
+                document.getElementById('file-section').style.display = 'block';
+            }
         });
 
         conn.on('data', (data) => {
-            addLog(`📩 파일 수신: ${data.fileName}`);
+            addLog(`📩 파일 수신됨: ${data.fileName}`);
             const blob = new Blob([data.file], { type: data.type });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -129,19 +138,27 @@
             document.querySelector('.card').appendChild(a);
         });
 
-        conn.on('error', (err) => addLog(`❌ 에러: ${err.type}`, "#ff453a"));
+        conn.on('error', (err) => addLog(`❌ 채널 오류: ${err.type}`, "#ff453a"));
+        conn.on('close', () => {
+            addLog("🔴 연결이 종료되었습니다.", "#ff453a");
+            location.reload();
+        });
     }
 
     function sendFile() {
-        const file = document.getElementById('file-input').files[0];
-        if (!file || !conn.open) return;
+        const fileInput = document.getElementById('file-input');
+        const file = fileInput.files[0];
+        if (!file || !conn || !conn.open) return alert("연결 확인 또는 파일 선택 필요");
 
-        addLog(`📤 전송 시작: ${file.name}`);
+        addLog(`📤 전송 시작: ${file.name} (${Math.round(file.size/1024)}KB)`);
         conn.send({ file: file, fileName: file.name, type: file.type });
-        addLog("📤 전송 패킷 발송 완료.");
+        addLog("📤 패킷 송신 완료!");
     }
 
-    peer.on('error', (err) => addLog(`시스템 에러: ${err.type}`, "#ff453a"));
+    peer.on('error', (err) => {
+        addLog(`시스템 에러: ${err.type}`, "#ff453a");
+        if(err.type === 'peer-not-found') addLog("상대방이 오프라인이거나 코드가 틀립니다.", "#ff453a");
+    });
 </script>
 
 </body>
