@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P 오픈 룸 채팅</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root { --primary: #4a90e2; --bg: #f5f7fa; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { width: 400px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        
+        /* 섹션 관리 */
+        .section { display: none; }
+        .active { display: block; }
+
+        /* 버튼/입력창 */
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 8px; }
+        .btn-create { background: var(--primary); color: white; }
+        .btn-join { background: #34c759; color: white; }
+        
+        /* 채팅창 */
+        #chat-box { height: 300px; border: 1px solid #eee; overflow-y: auto; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; }
+        .msg { margin: 5px 0; padding: 8px 12px; border-radius: 15px; font-size: 0.9em; max-width: 80%; }
+        .me { align-self: flex-end; background: var(--primary); color: white; }
+        .peer { align-self: flex-start; background: #e9e9eb; }
+        .system { align-self: center; background: #eee; font-size: 0.7em; color: #777; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="step-1" class="section active">
+            <h3>대화명 설정</h3>
+            <input type="text" id="my-nickname" placeholder="사용할 이름 입력">
+            <button class="btn-create" onclick="initPeer()">접속하기</button>
+        </div>
+
+        <div id="step-2" class="section">
+            <h3>무엇을 할까요?</h3>
+            <p style="font-size: 0.8em; color: #666;">내 ID: <span id="my-id-display" style="font-weight:bold;"></span></p>
+            <button class="btn-create" onclick="startWaiting()">방 만들기 (대기 모드)</button>
+            <hr>
+            <input type="text" id="target-id" placeholder="참여할 방 ID(상대방 닉네임) 입력">
+            <button class="btn-join" onclick="joinRoom()">방 입장하기</button>
+        </div>
+
+        <div id="step-3" class="section">
+            <h4 id="room-title">채팅 중</h4>
+            <div id="chat-box"></div>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="msg-input" placeholder="메시지...">
+                <button style="width: 80px;" class="btn-create" onclick="sendMsg()">전송</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let peer, conn, myId;
+
+        function showStep(step) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('step-' + step).classList.add('active');
+        }
+
+        // 1. Peer 초기화
+        function initPeer() {
+            myId = document.getElementById('my-nickname').value.trim();
+            if(!myId) return alert("이름을 입력하세요.");
+
+            peer = new Peer(myId, { host: '0.peerjs.com', port: 443, secure: true });
+
+            peer.on('open', (id) => {
+                document.getElementById('my-id-display').innerText = id;
+                showStep(2);
+            });
+
+            peer.on('connection', (c) => {
+                conn = c;
+                setupChat();
+                showStep(3);
+                document.getElementById('room-title').innerText = conn.peer + "님과 대화 중";
+            });
+
+            peer.on('error', (err) => {
+                if(err.type === 'id-taken') alert("이미 누가 사용 중인 이름입니다.");
+                else alert("오류: " + err.type);
+            });
+        }
+
+        // 2. 방 만들기 (대기)
+        function startWaiting() {
+            alert("상대방이 내 닉네임(" + myId + ")을 입력하면 연결됩니다.");
+            // 수동적인 대기 상태이므로 별도 로직 없이 대기
+        }
+
+        // 3. 방 입장하기 (연결 시도)
+        function joinRoom() {
+            const target = document.getElementById('target-id').value.trim();
+            if(!target) return alert("입장할 방 ID를 입력하세요.");
+            
+            conn = peer.connect(target);
+            setupChat();
+            showStep(3);
+            document.getElementById('room-title').innerText = target + "님 방에 입장함";
+        }
+
+        // 4. 채팅 로직
+        function setupChat() {
+            conn.on('data', data => addMsg(conn.peer, data, 'peer'));
+            conn.on('open', () => addMsg("시스템", "연결되었습니다.", "system"));
+        }
+
+        function sendMsg() {
+            const input = document.getElementById('msg-input');
+            if(!input.value || !conn) return;
+            conn.send(input.value);
+            addMsg(myId, input.value, 'me');
+            input.value = '';
+        }
+
+        function addMsg(sender, text, type) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = `msg ${type}`;
+            div.innerHTML = type === 'system' ? text : `<strong>${sender}</strong><br>${text}`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>
