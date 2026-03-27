@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>대화면2 WebRTC 원격 제어 (외부망 지원)</title>
+    <title>대화면3 WebRTC 원격 제어 (TURN 서버 적용)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f4f9; padding: 20px; margin: 0; }
@@ -27,7 +27,7 @@
 <body>
 
     <div style="padding: 0 20px;">
-        <h2>⚡ WebRTC 화면 제어 (대화면 & 외부망 지원)</h2>
+        <h2>⚡ WebRTC 화면 제어 (강력한 방화벽 우회 모드)</h2>
     </div>
     
     <div class="controls-wrapper">
@@ -58,13 +58,30 @@
     let peer;
     let dataConn;
 
-    // 🌟 핵심: 외부 네트워크(NAT/방화벽) 통과를 위한 퍼블릭 STUN 서버 설정
+    // 🌟 최후의 보루: 방화벽 우회를 위한 STUN + TURN 서버 모두 적용
     const peerConfig = {
         config: {
             iceServers: [
+                // 1. 일반망에서 P2P 직결을 시도하는 STUN
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun.cloudflare.com:3478' }
+                { urls: 'stun:stun.cloudflare.com:3478' },
+                
+                // 2. 방화벽에 막혔을 때 데이터를 중계해주는 TURN (무료 공용 서버)
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443?transport=tcp', // TCP 우회 강제
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
             ]
         }
     };
