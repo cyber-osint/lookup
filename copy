@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Quick Text Share</title>
+    <script src="https://unpkg.com/trystero@0.19.0/dist/trystero-torrent.min.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+        .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:disabled { background-color: #ccc; }
+        .status { font-size: 0.9em; color: #666; margin-top: 10px; }
+        #receivedBox { background: #f9f9f9; padding: 10px; border-left: 4px solid #007bff; display: none; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>P2P 텍스트 전달</h2>
+    
+    <label>4자리 연결 코드</label>
+    <input type="text" id="roomCode" placeholder="예: 1234" maxlength="4">
+    <button id="connectBtn">연결하기</button>
+    
+    <div id="status" class="status">코드를 입력하고 연결하세요.</div>
+
+    <hr>
+
+    <div id="chatSection" style="display:none;">
+        <label>보낼 텍스트</label>
+        <textarea id="sendText" placeholder="상대방에게 보낼 내용을 입력하세요"></textarea>
+        <button id="sendBtn">텍스트 전송</button>
+    </div>
+
+    <div id="receivedBox">
+        <strong>받은 텍스트:</strong>
+        <p id="receivedText"></p>
+        <button onclick="copyText()">복사하기</button>
+    </div>
+</div>
+
+<script>
+    let config = {appId: 'my-p2p-text-app'};
+    let room, sendData, getData;
+
+    const connectBtn = document.getElementById('connectBtn');
+    const roomInput = document.getElementById('roomCode');
+    const statusDiv = document.getElementById('status');
+    const chatSection = document.getElementById('chatSection');
+    const receivedBox = document.getElementById('receivedBox');
+
+    // 연결 버튼 클릭 시
+    connectBtn.onclick = () => {
+        const code = roomInput.value.trim();
+        if (code.length < 4) return alert('4자리 코드를 입력하세요.');
+
+        statusDiv.innerText = "연결 시도 중 (트래커 접속)...";
+        connectBtn.disabled = true;
+
+        // Trystero 비트토렌트 전략 사용 (서버리스)
+        room = joinRoom(config, code);
+
+        // 데이터 송수신 정의
+        [sendData, getData] = room.makeAction('textShare');
+
+        // 피어 연결 시
+        room.onPeerJoin(peerId => {
+            statusDiv.innerText = "상대방과 연결되었습니다!";
+            statusDiv.style.color = "blue";
+            chatSection.style.display = "block";
+        });
+
+        // 데이터 수신 시
+        getData((data, peerId) => {
+            receivedBox.style.display = "block";
+            document.getElementById('receivedText').innerText = data;
+        });
+    };
+
+    // 전송 버튼 클릭 시
+    document.getElementById('sendBtn').onclick = () => {
+        const text = document.getElementById('sendText').value;
+        if (!text) return alert('텍스트를 입력하세요.');
+        
+        sendData(text);
+        alert('전송 완료!');
+    };
+
+    function copyText() {
+        const text = document.getElementById('receivedText').innerText;
+        navigator.clipboard.writeText(text);
+        alert('복사되었습니다.');
+    }
+</script>
+
+</body>
+</html>
