@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>OpenReplay 방식 (DOM 캡처) 원격 제어 - 동기화 패치</title>
+    <title>OpenReplay 방식 (DOM 캡처) - 안정화 패치</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
-    <script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/rrweb@1.1.3/dist/rrweb.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/rrweb@1.1.3/dist/rrweb.min.css" />
 
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f4f9; padding: 20px; margin: 0; }
@@ -18,15 +18,9 @@
         input[type="text"] { padding: 9px; font-size: 16px; text-align: center; font-weight: bold; }
         .id-display { font-size: 24px; font-weight: bold; color: #d9534f; margin: 10px 0; letter-spacing: 2px; }
         
-        /* 테스트용 영역 (호스트가 여기서 노는 것을 게스트가 구경함) */
         .test-area { margin-top: 15px; padding: 15px; background: #e9ecef; border-radius: 8px; border: 2px dashed #adb5bd; }
-        
-        /* 게스트 화면 재생 영역 */
         #replayer-container { margin-top: 20px; width: 100%; height: 70vh; background: #fff; border: 3px solid #333; border-radius: 8px; display: none; overflow: hidden; position: relative; }
-        
-        /* 게스트가 클릭할 수 있도록 덮어씌우는 투명 막 */
         #click-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; cursor: crosshair; }
-        
         #pointer { position: fixed; width: 20px; height: 20px; background: rgba(255, 0, 0, 0.8); border-radius: 50%; pointer-events: none; display: none; z-index: 9999; transform: translate(-50%, -50%); box-shadow: 0 0 8px rgba(255,0,0,0.8); }
         #debugLog { margin-top: 20px; padding: 10px; background: #333; color: #0f0; font-family: monospace; font-size: 12px; border-radius: 5px; max-height: 150px; overflow-y: auto; white-space: pre-wrap; }
     </style>
@@ -34,8 +28,7 @@
 <body>
 
     <div style="padding: 0 20px;">
-        <h2>🛠 DOM 캡처 원격 제어 (방화벽 우회 모드)</h2>
-        <p>비디오 스트리밍 없이 HTML 구조와 변화를 텍스트로 실시간 동기화합니다.</p>
+        <h2>🛠 DOM 캡처 원격 제어 (안정화 버전)</h2>
     </div>
     
     <div class="controls-wrapper">
@@ -47,11 +40,10 @@
             
             <div class="test-area">
                 <h4>🧪 테스트 영역</h4>
-                <p>여기에 글씨를 쓰거나 체크박스를 누르면 게스트 화면에 실시간으로 보입니다.</p>
                 <input type="text" placeholder="아무 글자나 입력해보세요" style="width: 80%;"><br><br>
                 <label><input type="checkbox"> 체크박스 1</label>
                 <label><input type="checkbox"> 체크박스 2</label><br><br>
-                <button onclick="alert('호스트가 버튼을 눌렀습니다!')">테스트 버튼</button>
+                <button onclick="alert('버튼 클릭됨!')">테스트 버튼</button>
             </div>
         </div>
 
@@ -70,7 +62,6 @@
     <div style="padding: 0 20px;">
         <div id="debugLog">시스템 대기 중...</div>
     </div>
-
     <div id="pointer"></div>
 
 <script>
@@ -78,14 +69,12 @@
     let dataConn;
     let replayer; 
 
-    // 디버그 로그 출력 함수
     function log(msg) {
         const logBox = document.getElementById('debugLog');
         logBox.innerText += '\n' + msg;
         logBox.scrollTop = logBox.scrollHeight;
     }
 
-    // 강력한 방화벽에서도 텍스트 데이터(DataChannel)는 통과하도록 TURN 유지
     const peerConfig = {
         config: {
             iceServers: [
@@ -96,9 +85,7 @@
         }
     };
 
-    // ==========================================
-    // 1. 호스트 (Host) : 내 DOM을 캡처해서 전송
-    // ==========================================
+    // --- Host 로직 ---
     function startHost() {
         const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
         peer = new Peer(randomId, peerConfig);
@@ -110,28 +97,26 @@
 
         peer.on('connection', conn => {
             dataConn = conn;
-            
-            conn.on('open', () => {
-                document.getElementById('hostStatus').innerText = '게스트 접속! 화면 준비 신호 대기 중...';
-                log('[Host] 게스트 제어 채널 연결됨. (게스트의 준비 완료 신호를 기다립니다)');
-            });
+            conn.on('open', () => log('[Host] 게스트 제어 채널 연결됨. 준비 신호 대기...'));
             
             conn.on('data', payload => {
-                // 🌟 게스트가 준비되었다는 신호를 받으면 그때 녹화 시작! (초기 데이터 유실 방지)
                 if (payload.type === 'guest_ready') {
-                    document.getElementById('hostStatus').innerText = '✅ 게스트 준비 완료! 캡처 전송 중...';
-                    log('[Host] 게스트 준비 완료. rrweb 녹화 및 전송 시작!');
+                    document.getElementById('hostStatus').innerText = '✅ 캡처 전송 중...';
+                    log('[Host] 게스트 준비 완료. 녹화 시작!');
 
                     rrweb.record({
                         emit(event) {
-                            // 대용량 데이터 유실을 막기 위해 JSON 문자열로 변환하여 전송
                             if (dataConn && dataConn.open) {
-                                dataConn.send({ type: 'rrweb_event', data: JSON.stringify(event) });
+                                try {
+                                    // 🌟 수정: JSON.stringify를 빼고 객체 그대로 전송 (PeerJS가 알아서 분할 전송함)
+                                    dataConn.send({ type: 'rrweb_event', data: event });
+                                } catch (e) {
+                                    log('🚨 [Host] 데이터 전송 에러: ' + e.message);
+                                }
                             }
                         }
                     });
                 }
-                // 게스트가 보낸 클릭 이벤트 수신
                 else if (payload.type === 'remote_click') {
                     showPointer(payload.x, payload.y);
                     log(`[Host] 원격 클릭 수신: X(${Math.round(payload.x*100)}%), Y(${Math.round(payload.y*100)}%)`);
@@ -140,9 +125,7 @@
         });
     }
 
-    // ==========================================
-    // 2. 게스트 (Guest) : 받은 텍스트로 DOM 재구성
-    // ==========================================
+    // --- Guest 로직 ---
     function connectGuest() {
         peer = new Peer(undefined, peerConfig);
         const hostId = document.getElementById('targetIdInput').value.toUpperCase();
@@ -152,39 +135,41 @@
             dataConn = peer.connect(hostId);
             
             dataConn.on('open', () => {
-                document.getElementById('guestStatus').innerText = '✅ 화면 수신 중!';
+                document.getElementById('guestStatus').innerText = '✅ 화면 수신 대기 중!';
                 log('[Guest] 텍스트 제어 채널 연결 성공. 플레이어 초기화 중...');
                 
-                const container = document.getElementById('replayer-container');
-                container.style.display = 'block';
-                container.scrollIntoView({ behavior: 'smooth' });
+                try {
+                    const container = document.getElementById('replayer-container');
+                    container.style.display = 'block';
+                    container.scrollIntoView({ behavior: 'smooth' });
 
-                // 플레이어 초기화
-                replayer = new rrweb.Replayer({
-                    target: container,
-                    liveMode: true, 
-                });
-                replayer.startLive();
+                    // 🌟 수정: 이 부분에서 발생하던 에러를 캐치하고 안전하게 렌더링
+                    replayer = new rrweb.Replayer({
+                        target: container,
+                        liveMode: true, 
+                    });
+                    replayer.startLive();
 
-                // 🌟 플레이어 준비가 끝났다고 호스트에게 알려줌 (이때부터 호스트가 전체 스냅샷을 보냄)
-                dataConn.send({ type: 'guest_ready' });
-                log('[Guest] 플레이어 준비 완료. 호스트에게 데이터 전송 요청.');
+                    dataConn.send({ type: 'guest_ready' });
+                    log('[Guest] 🟢 플레이어 초기화 성공! 호스트에게 데이터 요청.');
+                } catch (e) {
+                    log('🚨 [Guest] 플레이어 생성 에러: ' + e.message);
+                    console.error(e);
+                }
             });
 
             dataConn.on('data', payload => {
-                // 수신한 JSON 문자열을 다시 객체로 변환하여 렌더링
                 if (payload.type === 'rrweb_event' && replayer) {
                     try {
-                        const eventData = JSON.parse(payload.data);
-                        replayer.addEvent(eventData);
+                        // 🌟 수정: 문자열 변환 없이 받은 객체를 바로 재생
+                        replayer.addEvent(payload.data);
                     } catch (e) {
-                        log('[Guest] 데이터 파싱 에러: ' + e);
+                        log('🚨 [Guest] 재생 에러: ' + e.message);
                     }
                 }
             });
         });
 
-        // 게스트가 화면을 클릭하면 호스트에게 좌표(비율) 전송
         const overlay = document.getElementById('click-overlay');
         overlay.addEventListener('click', (e) => {
             if (dataConn && dataConn.open) {
@@ -198,9 +183,6 @@
         });
     }
 
-    // ==========================================
-    // 3. 호스트 화면에 가짜 마우스 표시
-    // ==========================================
     function showPointer(xPercent, yPercent) {
         const pointer = document.getElementById('pointer');
         pointer.style.display = 'block';
