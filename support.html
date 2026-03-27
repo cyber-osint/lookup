@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC 정적 화면 제어</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { display: flex; gap: 20px; }
+        .panel { flex: 1; border: 1px solid #ccc; padding: 15px; border-radius: 8px; }
+        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+        video { width: 100%; border: 1px solid #000; background: #222; cursor: crosshair; }
+        #remotePointer {
+            position: fixed; width: 15px; height: 15px; 
+            background: red; border-radius: 50%; 
+            pointer-events: none; display: none; z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>WebRTC 화면 공유 & 원격 제어 (서버 없음)</h2>
+    <p>💡 화면을 공유하는 쪽(Host)과 화면을 보고 제어하는 쪽(Guest)을 선택하세요.</p>
+    
+    <div class="container">
+        <div class="panel">
+            <h3>1. 내 역할 선택</h3>
+            <button onclick="startHost()">📺 내 화면 공유하기 (Host)</button>
+            <button onclick="startGuest()">👀 상대방 화면 보기 (Guest)</button>
+            <br><br>
+            <label>내 연결 정보 (복사해서 상대방에게 전달):</label>
+            <textarea id="localData" readonly placeholder="역할을 선택하면 정보가 생성됩니다..."></textarea>
+        </div>
+
+        <div class="panel">
+            <h3>2. 상대방 정보 입력</h3>
+            <label>상대방이 준 연결 정보 붙여넣기:</label>
+            <textarea id="remoteData" placeholder="여기에 붙여넣으세요..."></textarea>
+            <button onclick="connect()">🔗 연결하기</button>
+        </div>
+    </div>
+
+    <hr>
+    
+    <h3>원격 화면</h3>
+    <div id="remotePointer"></div>
+    <video id="remoteVideo" autoplay playsinline></video>
+
+<script>
+    let pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    let dataChannel;
+    let isHost = false;
+
+    // ICE 후보 수집이 끝나면 SDP 텍스트를 화면에 표시
+    pc.onicecandidate = e => {
+        if (!e.candidate) {
+            document.getElementById('localData').value = btoa(JSON.stringify(pc.localDescription));
+        }
+    };
+
+    // [Host] 화면 공유 시작 및 제어 명령 수신 대기
+    async function startHost() {
+        isHost = true;
+        // 1. 화면 캡처 권한 요청
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+        // 2. DataChannel 생성 (Guest의 클릭 이벤트를 받을 통로)
+        pc.ondatachannel = e => {
+            const receiveChannel = e.channel;
+            receiveChannel.onmessage = msg => {
+                const data = JSON.parse(msg.data);
+                if (data.type === 'click') {
+                    showRemoteClick(data.x, data.y);
+                }
+            };
+        };
+
+        // 3. Offer 생성
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+    }
+
+    // [Guest] 화면 수신 대기 및 제어 명령 전송 준비
+    async function startGuest() {
+        // 1. 비디오 스트림 수신 처리
+        pc.ontrack = e => {
+            document.getElementById('remoteVideo').srcObject = e.streams[0];
+        };
+
+        // 2. DataChannel 생성 (Host로 클릭 이벤트 전송)
+        dataChannel = pc.createDataChannel('control');
+
+        // 3. 비디오 영역 클릭 시 Host에게 좌표(%) 전송
+        const videoEl = document.getElementById('remoteVideo');
+        videoEl.addEventListener('click', (e) => {
+            if (dataChannel && dataChannel.readyState === 'open') {
+                const rect = videoEl.getBoundingClientRect();
+                const xPercent = (e.clientX - rect.left) / rect.width;
+                const yPercent = (e.clientY - rect.top) / rect.height;
+                dataChannel.send(JSON.stringify({ type: 'click', x: xPercent, y: yPercent }));
+            }
+        });
+    }
+
+    // 상대방의 SDP 정보를 기반으로 연결 완료하기
+    async function connect() {
+        const remoteInfo = JSON.parse(atob(document.getElementById('remoteData').value));
+        await pc.setRemoteDescription(new RTCSessionDescription(remoteInfo));
+
+        // Guest인 경우 Offer를 받았으므로 Answer를 생성해서 Host에게 전달해야 함
+        if (!isHost) {
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+        } else {
+            alert('연결이 완료되었습니다!');
+        }
+    }
+
+    // [Host] Guest가 보낸 좌표를 받아 화면에 붉은 점으로 표시 (제어 시뮬레이션)
+    function showRemoteClick(xPercent, yPercent) {
+        const pointer = document.getElementById('remotePointer');
+        pointer.style.display = 'block';
+        pointer.style.left = (window.innerWidth * xPercent) + 'px';
+        pointer.style.top = (window.innerHeight * yPercent) + 'px';
+        
+        // 0.5초 뒤에 사라짐
+        setTimeout(() => pointer.style.display = 'none', 500);
+
+        // 실제 프로덕션에서는 이 위치의 DOM 요소를 찾아 click() 이벤트를 발생시킵니다.
+        // 예: document.elementFromPoint(x, y).click();
+    }
+</script>
+</body>
+</html>
