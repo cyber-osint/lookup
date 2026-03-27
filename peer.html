@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>PeerJS 화상통화 테스트</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f4f7f6; }
+        .video-container { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        video { width: 300px; background: #000; border-radius: 10px; }
+        .status { margin: 20px; padding: 10px; background: #eee; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <h2>PeerJS 화상 통화 (No Backend)</h2>
+
+    <div class="status">
+        <strong>나의 ID:</strong> <span id="my-id">연결 중...</span>
+    </div>
+
+    <div>
+        <input type="text" id="peer-id" placeholder="상대방 ID 입력">
+        <button id="call-btn">통화 걸기</button>
+    </div>
+
+    <div class="video-container">
+        <div><p>내 화면</p><video id="local-video" autoplay muted></video></div>
+        <div><p>상대방 화면</p><video id="remote-video" autoplay></video></div>
+    </div>
+
+    <script>
+        const myIdDisplay = document.getElementById('my-id');
+        const peerIdInput = document.getElementById('peer-id');
+        const callBtn = document.getElementById('call-btn');
+        const localVideo = document.getElementById('local-video');
+        const remoteVideo = document.getElementById('remote-video');
+
+        // 1. Peer 객체 생성 (PeerJS 무료 클라우드 서버 사용)
+        const peer = new Peer(); 
+
+        let localStream;
+
+        // 2. 내 카메라 스트림 가져오기
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+            localStream = stream;
+            localVideo.srcObject = stream;
+        });
+
+        // 3. 내 ID가 생성되었을 때 표시
+        peer.on('open', (id) => {
+            myIdDisplay.innerText = id;
+            console.log('내 Peer ID:', id);
+        });
+
+        // 4. 전화를 받았을 때 처리 (Answer)
+        peer.on('call', (call) => {
+            call.answer(localStream); // 내 스트림을 상대에게 보냄
+            call.on('stream', (remoteStream) => {
+                remoteVideo.srcObject = remoteStream; // 상대방 스트림 표시
+            });
+        });
+
+        // 5. 버튼 눌러서 전화 걸기 (Call)
+        callBtn.onclick = () => {
+            const remotePeerId = peerIdInput.value;
+            const call = peer.call(remotePeerId, localStream);
+            
+            call.on('stream', (remoteStream) => {
+                remoteVideo.srcObject = remoteStream;
+            });
+        };
+    </script>
+</body>
+</html>
