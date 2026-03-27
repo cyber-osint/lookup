@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Private Chat</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            max-width: 500px;
+            margin: 30px auto;
+            padding: 0 16px 40px;
+            background: #f0f2f5;
+            color: #1a1a1a;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1a1a1a;
+        }
+
+        /* 상태 박스 */
+        .status-box {
+            background: #1e1e2e;
+            color: #e0e0ff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-box .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+            flex-shrink: 0;
+        }
+        .status-box strong { color: #a5b4fc; }
+
+        /* 연결 영역 */
+        #connect-area {
+            background: white;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        #connect-area input {
+            flex: 1;
+            padding: 9px 12px;
+            border: 1px solid #ccc;
+            border-radius: 7px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        #connect-area input:focus { border-color: #6366f1; }
+
+        /* 채팅박스 */
+        #chat-box {
+            height: 420px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow-y: auto;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            scroll-behavior: smooth;
+        }
+
+        /* 메시지 */
+        .msg-container {
+            display: flex;
+            flex-direction: column;
+            margin: 4px 0;
+        }
+        .me-container { align-items: flex-end; }
+        .peer-container { align-items: flex-start; }
+
+        .sender-id {
+            font-size: 0.72rem;
+            color: #888;
+            margin-bottom: 3px;
+            padding: 0 4px;
+        }
+        .me-container .sender-id { text-align: right; color: #6366f1; }
+
+        .msg {
+            padding: 8px 13px;
+            border-radius: 14px;
+            max-width: 78%;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            word-break: break-all;
+        }
+        .me {
+            background: #6366f1;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .peer {
+            background: #e9e9eb;
+            color: #1a1a1a;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* 시스템 메시지 */
+        .system-msg {
+            align-self: center;
+            font-size: 0.76rem;
+            color: #999;
+            background: #f0f0f0;
+            border-radius: 6px;
+            padding: 4px 10px;
+            margin: 8px 0;
+        }
+
+        /* 입력창 */
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .input-row input {
+            flex: 1;
+            padding: 11px 14px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-row input:focus { border-color: #6366f1; }
+        .input-row input:disabled { background: #f5f5f5; color: #aaa; }
+
+        /* 버튼 공통 */
+        button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            white-space: nowrap;
+        }
+        button:active { transform: scale(0.97); }
+        button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+        #start-btn   { background: #6366f1; color: white; }
+        #connect-btn { background: #0ea5e9; color: white; }
+        #send-btn    { background: #6366f1; color: white; }
+
+        /* 셋업 카드 */
+        .setup-card {
+            background: white;
+            padding: 28px 24px;
+            border-radius: 14px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        .setup-card p { font-size: 0.95rem; color: #555; margin-bottom: 14px; text-align: center; }
+        .setup-card .input-row input { font-size: 1rem; padding: 12px 14px; }
+
+        /* 연결 상태 뱃지 */
+        #conn-status {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-left: 4px;
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        #conn-status.connected { background: #dcfce7; color: #15803d; }
+    </style>
+</head>
+<body>
+
+<h2>P2P Private Chat</h2>
+
+<!-- 셋업 화면 -->
+<div id="setup-area" class="setup-card">
+    <p>사용할 닉네임을 입력하세요</p>
+    <div class="input-row">
+        <input type="text" id="my-id-input" placeholder="예: user77" maxlength="30">
+        <button id="start-btn">접속</button>
+    </div>
+</div>
+
+<!-- 채팅 화면 -->
+<div id="chat-area" style="display:none;">
+
+    <div class="status-box">
+        <span class="dot"></span>
+        <span>내 ID: <strong id="display-id"></strong></span>
+        <span id="conn-status">미연결</span>
+    </div>
+
+    <div id="connect-area">
+        <input type="text" id="peer-id-input" placeholder="상대방 ID 입력 후 Enter">
+        <button id="connect-btn">연결</button>
+    </div>
+
+    <div id="chat-box"></div>
+
+    <div class="input-row">
+        <input type="text" id="message-input" placeholder="메시지를 입력하세요..." disabled>
+        <button id="send-btn" disabled>전송</button>
+    </div>
+
+</div>
+
+<script>
+    let peer = null;
+    let conn = null;
+    let myId = "";
+
+    const setupArea   = document.getElementById('setup-area');
+    const chatArea    = document.getElementById('chat-area');
+    const myIdInput   = document.getElementById('my-id-input');
+    const startBtn    = document.getElementById('start-btn');
+    const displayId   = document.getElementById('display-id');
+    const connStatus  = document.getElementById('conn-status');
+    const peerIdInput = document.getElementById('peer-id-input');
+    const connectBtn  = document.getElementById('connect-btn');
+    const chatBox     = document.getElementById('chat-box');
+    const messageInput = document.getElementById('message-input');
+    const sendBtn     = document.getElementById('send-btn');
+
+    /* ── 접속 ── */
+    function startPeer() {
+        const rawId = myIdInput.value.trim();
+        if (!rawId) return alert("닉네임을 입력하세요.");
+
+        startBtn.disabled = true;
+        startBtn.textContent = "접속 중…";
+
+        peer = new Peer(rawId, {
+            host: '0.peerjs.com',
+            port: 443,
+            secure: true,
+            debug: 0
+        });
+
+        peer.on('open', (id) => {
+            myId = id;
+            setupArea.style.display = 'none';
+            chatArea.style.display  = 'block';
+            displayId.innerText = id;
+            addSystem("채팅방 입장 완료. 상대방 ID로 연결하거나 내 ID를 공유하세요.");
+        });
+
+        /* 수신 측: 상대방이 먼저 connect() 해온 경우 */
+        peer.on('connection', (incoming) => {
+            /* 이미 연결돼 있으면 새 연결 거절 */
+            if (conn && conn.open) {
+                incoming.on('open', () => incoming.close());
+                addSystem("다른 연결 요청이 있었지만 이미 연결 중입니다.");
+                return;
+            }
+            conn = incoming;
+            /* 수신 측은 connection 이벤트 시점에 이미 open이므로
+               open 이벤트를 별도로 기다리지 않고 바로 핸들러 등록 */
+            addSystem(`상대방(${conn.peer})이 연결을 요청했습니다.`);
+            bindConnHandlers(false);
+        });
+
+        peer.on('error', (err) => {
+            startBtn.disabled = false;
+            startBtn.textContent = "접속";
+            if (err.type === 'id-taken') {
+                alert("이미 사용 중인 닉네임입니다. 다른 이름을 사용하세요.");
+            } else if (err.type === 'peer-unavailable') {
+                addSystem("상대방을 찾을 수 없습니다. ID를 확인해 주세요.");
+                resetConnState();
+            } else {
+                alert("오류: " + err.type);
+            }
+        });
+
+        peer.on('disconnected', () => {
+            addSystem("서버 연결이 끊어졌습니다. 재접속을 시도합니다…");
+            peer.reconnect();
+        });
+    }
+
+    startBtn.onclick = startPeer;
+    myIdInput.onkeydown = (e) => { if (e.key === 'Enter') startPeer(); };
+
+    /* ── 발신 측 연결 ── */
+    function connectToPeer() {
+        const remoteId = peerIdInput.value.trim();
+        if (!remoteId) return alert("상대방 ID를 입력하세요.");
+        if (remoteId === myId) return alert("자기 자신에게 연결할 수 없습니다.");
+        if (conn && conn.open) return alert("이미 연결 중입니다.");
+
+        connectBtn.disabled = true;
+        connectBtn.textContent = "연결 중…";
+        addSystem(`${remoteId}에게 연결을 시도합니다…`);
+
+        conn = peer.connect(remoteId, { reliable: true });
+        bindConnHandlers(true);
+    }
+
+    connectBtn.onclick = connectToPeer;
+    peerIdInput.onkeydown = (e) => { if (e.key === 'Enter') connectToPeer(); };
+
+    /* ── 공통 연결 핸들러 ── */
+    function bindConnHandlers(isInitiator) {
+        /* 발신 측만 open 이벤트 대기 (수신 측은 이미 open) */
+        if (isInitiator) {
+            conn.on('open', () => {
+                addSystem(`${conn.peer}과 연결되었습니다.`);
+                setConnected(true);
+            });
+        } else {
+            setConnected(true);
+        }
+
+        conn.on('data', (data) => {
+            if (typeof data !== 'string') return;
+            addMessage(conn.peer, data, 'peer');
+        });
+
+        conn.on('close', () => {
+            addSystem("상대방이 연결을 종료했습니다.");
+            resetConnState();
+        });
+
+        conn.on('error', (err) => {
+            addSystem("연결 오류: " + err.message);
+            resetConnState();
+        });
+    }
+
+    /* ── UI 상태 전환 ── */
+    function setConnected(yes) {
+        messageInput.disabled = !yes;
+        sendBtn.disabled      = !yes;
+        connectBtn.disabled   = yes;
+        connectBtn.textContent = "연결";
+        peerIdInput.disabled  = yes;
+        connStatus.textContent = yes ? "연결됨" : "미연결";
+        connStatus.className   = yes ? "connected" : "";
+        if (yes) messageInput.focus();
+    }
+
+    function resetConnState() {
+        conn = null;
+        setConnected(false);
+        peerIdInput.disabled  = false;
+        peerIdInput.value     = "";
+        connectBtn.disabled   = false;
+    }
+
+    /* ── 메시지 전송 ── */
+    function sendMessage() {
+        const msg = messageInput.value.trim();
+        if (!msg) return;
+        if (!conn || !conn.open) {
+            addSystem("연결이 끊어져 있습니다. 재연결 후 다시 시도하세요.");
+            return;
+        }
+        conn.send(msg);
+        addMessage(myId, msg, 'me');
+        messageInput.value = "";
+    }
+
+    sendBtn.onclick = sendMessage;
+    messageInput.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); };
+
+    /* ── 메시지 렌더링 ── */
+    function addMessage(sender, text, type) {
+        const container = document.createElement('div');
+        container.className = `msg-container ${type}-container`;
+
+        const idLabel = document.createElement('div');
+        idLabel.className = 'sender-id';
+        idLabel.textContent = sender;
+
+        const bubble = document.createElement('div');
+        bubble.className = `msg ${type}`;
+        bubble.textContent = text;
+
+        container.appendChild(idLabel);
+        container.appendChild(bubble);
+        chatBox.appendChild(container);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function addSystem(text) {
+        const div = document.createElement('div');
+        div.className = 'system-msg';
+        div.textContent = text;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+</script>
+</body>
+</html>
